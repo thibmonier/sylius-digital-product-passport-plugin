@@ -39,23 +39,19 @@ jobs:
                 database: ["mysql:8.4"]
                 node: ["22.x"]
 
+                exclude:
+                    - sylius: "~2.3.0"
+                      php: "8.2"
+                    - sylius: "~2.2.0"
+                      symfony: "^8.0"
+
                 include:
                     - php: "8.2"
-                      symfony: "^6.4"
+                      symfony: "^7.4"
                       sylius: "~2.2.0"
                       database: "mysql:8.4"
                       node: "22.x"
-                    - php: "8.3"
-                      symfony: "^6.4"
-                      sylius: "~2.3.0"
-                      database: "mysql:8.4"
-                      node: "22.x"
                     - php: "8.4"
-                      symfony: "^8.0"
-                      sylius: "~2.3.0"
-                      database: "mysql:8.4"
-                      node: "22.x"
-                    - php: "8.5"
                       symfony: "^8.0"
                       sylius: "~2.3.0"
                       database: "mysql:8.4"
@@ -70,12 +66,11 @@ jobs:
                       sylius: "~2.3.0"
                       database: "postgres:17"
                       node: "22.x"
-
-                exclude:
-                    - sylius: "~2.2.0"
-                      symfony: "^8.0"
-                    - sylius: "~2.3.0"
-                      php: "8.2"
+                    - php: "8.5"
+                      symfony: "^7.4"
+                      sylius: "~2.3.0"
+                      database: "mysql:8.4"
+                      node: "22.x"
 
         env:
             APP_ENV: test

@@ -23,6 +23,19 @@ final class TmonierSyliusDigitalProductPassportExtension extends Extension imple
 
     public function prepend(ContainerBuilder $container): void
     {
+        $container->prependExtensionConfig('doctrine', [
+            'orm' => [
+                'mappings' => [
+                    'TmonierSyliusDigitalProductPassportPlugin' => [
+                        'type' => 'attribute',
+                        'dir' => __DIR__ . '/../Entity',
+                        'prefix' => 'Tmonier\SyliusDigitalProductPassportPlugin\Entity',
+                        'is_bundle' => false,
+                    ],
+                ],
+            ],
+        ]);
+
         $this->prependDoctrineMigrations($container);
     }
 
