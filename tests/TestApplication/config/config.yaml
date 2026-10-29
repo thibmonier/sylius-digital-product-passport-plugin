@@ -4,3 +4,13 @@ imports:
     - { resource: "@SyliusShopBundle/Resources/config/app/config.yaml" }
     - { resource: "@SyliusApiBundle/Resources/config/app/config.yaml" }
     - { resource: "@SyliusPayPalPlugin/Resources/config/config.yaml" }
+
+doctrine:
+    orm:
+        mappings:
+            TmonierSyliusDigitalProductPassportPlugin:
+                type: attribute
+                is_bundle: false
+                dir: '%kernel.project_dir%/src/Entity'
+                prefix: 'Tmonier\SyliusDigitalProductPassportPlugin\Entity'
+                alias: TmonierSyliusDigitalProductPassportPlugin
