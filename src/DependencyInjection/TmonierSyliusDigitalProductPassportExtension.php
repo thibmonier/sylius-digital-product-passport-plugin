@@ -10,6 +10,7 @@ use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Extension\Extension;
 use Symfony\Component\DependencyInjection\Extension\PrependExtensionInterface;
 use Symfony\Component\DependencyInjection\Loader\PhpFileLoader;
+use Symfony\Component\Yaml\Yaml;
 
 final class TmonierSyliusDigitalProductPassportExtension extends Extension implements PrependExtensionInterface
 {
@@ -37,6 +38,10 @@ final class TmonierSyliusDigitalProductPassportExtension extends Extension imple
         ]);
 
         $this->prependDoctrineMigrations($container);
+
+        /** @var array{sylius_twig_hooks: array<string, mixed>} $twigHooksConfig */
+        $twigHooksConfig = Yaml::parseFile(__DIR__ . '/../../config/twig_hooks/product_show.yaml');
+        $container->prependExtensionConfig('sylius_twig_hooks', $twigHooksConfig['sylius_twig_hooks']);
     }
 
     public function getAlias(): string

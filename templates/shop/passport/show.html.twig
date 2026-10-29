@@ -1,82 +1,50 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ 'tmonier_digital_product_passport.ui.product_passport'|trans }}</title>
-    <style>
-        body {
-            font-family: sans-serif;
-            max-width: 800px;
-            margin: 2rem auto;
-            padding: 0 1rem;
-            line-height: 1.6;
-        }
-        .field {
-            margin-bottom: 1.5rem;
-        }
-        label {
-            display: block;
-            font-weight: bold;
-            margin-bottom: 0.5rem;
-        }
-        .info-message {
-            background: #e7f3ff;
-            border: 1px solid #b3d9ff;
-            padding: 1rem;
-            margin-top: 2rem;
-            border-radius: 4px;
-        }
-    </style>
-</head>
-<body>
-    <h1>{{ 'tmonier_digital_product_passport.ui.product_passport'|trans }}</h1>
+{% extends '@SyliusShop/shared/layout/base.html.twig' %}
 
-    <div>
-        {% if passport.productIdentifier %}
-        <div class="field">
-                <label>{{ 'tmonier_digital_product_passport.ui.product_identifier'|trans }}</label>
-                <div>{{ passport.productIdentifier }}</div>
-            </div>
+{% block metatags %}
+    {{ parent() }}
+    <meta name="robots" content="noindex">
+{% endblock %}
+
+{% block title %}
+    {{ 'tmonier_digital_product_passport.ui.product_passport'|trans }} - {{ parent() }}
+{% endblock %}
+
+{% block content %}
+    <div class="container my-5">
+        <h1>{{ 'tmonier_digital_product_passport.ui.product_passport'|trans }}</h1>
+
+        <dl class="row mt-4">
+            {% if passport.productIdentifier %}
+                <dt class="col-sm-4">{{ 'tmonier_digital_product_passport.ui.product_identifier'|trans }}</dt>
+                <dd class="col-sm-8">{{ passport.productIdentifier }}</dd>
             {% endif %}
 
             {% if passport.originMaterials %}
-            <div class="field">
-                <label>{{ 'tmonier_digital_product_passport.ui.origin'|trans }}</label>
-                <div>{{ passport.originMaterials }}</div>
-            </div>
+                <dt class="col-sm-4">{{ 'tmonier_digital_product_passport.ui.origin'|trans }}</dt>
+                <dd class="col-sm-8">{{ passport.originMaterials }}</dd>
             {% endif %}
 
             {% if passport.recyclability %}
-            <div class="field">
-                <label>{{ 'tmonier_digital_product_passport.ui.recyclability'|trans }}</label>
-                <div>{{ passport.recyclability }}</div>
-            </div>
+                <dt class="col-sm-4">{{ 'tmonier_digital_product_passport.ui.recyclability'|trans }}</dt>
+                <dd class="col-sm-8">{{ passport.recyclability }}</dd>
             {% endif %}
 
             {% if passport.repairability %}
-            <div class="field">
-                <label>{{ 'tmonier_digital_product_passport.ui.repairability'|trans }}</label>
-                <div>{{ passport.repairability }}</div>
-            </div>
+                <dt class="col-sm-4">{{ 'tmonier_digital_product_passport.ui.repairability'|trans }}</dt>
+                <dd class="col-sm-8">{{ passport.repairability }}</dd>
             {% endif %}
 
-            <div class="field">
-                <label>{{ 'tmonier_digital_product_passport.ui.version'|trans }}</label>
-                <div>Version {{ passport.version }}</div>
-            </div>
+            <dt class="col-sm-4">{{ 'tmonier_digital_product_passport.ui.version'|trans }}</dt>
+            <dd class="col-sm-8">Version {{ passport.version }}</dd>
 
-            <div class="field">
-                <label>{{ 'tmonier_digital_product_passport.ui.last_update'|trans }}</label>
-                <div data-test="passport-updated-at">
-                    {{ passport.updatedAt|date('Y-m-d H:i:s') }}
-                </div>
-            </div>
-        </div>
+            <dt class="col-sm-4">{{ 'tmonier_digital_product_passport.ui.last_update'|trans }}</dt>
+            <dd class="col-sm-8" data-test="passport-updated-at">
+                {{ passport.updatedAt|date('Y-m-d H:i:s') }}
+            </dd>
+        </dl>
 
-        <div class="info-message">
-            <p>{{ 'tmonier_digital_product_passport.ui.disclaimer'|trans }}</p>
+        <div class="alert alert-info mt-4">
+            <p class="mb-0">{{ 'tmonier_digital_product_passport.ui.disclaimer'|trans }}</p>
         </div>
     </div>
-</body>
-</html>
+{% endblock %}
