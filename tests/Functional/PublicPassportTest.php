@@ -78,6 +78,7 @@ final class PublicPassportTest extends WebTestCase
     {
         // Gherkin: "Lien depuis la fiche produit (alternatif)"
         $variant = $this->createProductVariant();
+        $product = $variant->getProduct();
 
         $passport = new DigitalProductPassport();
         $passport->setProductVariant($variant);
@@ -86,9 +87,12 @@ final class PublicPassportTest extends WebTestCase
         $this->entityManager->persist($passport);
         $this->entityManager->flush();
 
-        // Note: This test will need a product show page template override
-        // For now, we test that the passport exists and has an ID
-        self::assertNotNull($passport->getId());
+        // Visit product show page
+        $this->client->request('GET', '/en_US/products/' . $product->getSlug());
+
+        self::assertResponseIsSuccessful();
+        // Must show "Product Passport" link
+        self::assertSelectorTextContains('a[href*="/product-passport/' . $passport->getId() . '"]', 'Product Passport');
     }
 
     public function testPassportPageDisplaysInEnglish(): void
