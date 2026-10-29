@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/11.0/phpunit.xsd"
+         colors="true"
+         cacheDirectory=".phpunit.cache"
+>
+    <php>
+        <ini name="error_reporting" value="-1" />
+
+        <env name="KERNEL_CLASS" value="Sylius\Bundle\ThemeBundle\Tests\Application\Kernel" />
+
+        <server name="SHELL_VERBOSITY" value="-1" />
+    </php>
+
+    <testsuites>
+        <testsuite name="SyliusThemeBundle Test Suite">
+            <directory>./tests/</directory>
+        </testsuite>
+    </testsuites>
+
+    <groups>
+        <exclude>
+            <group>legacy</group>
+        </exclude>
+    </groups>
+
+    <source>
+        <include>
+            <directory>./src/</directory>
+        </include>
+    </source>
+</phpunit>

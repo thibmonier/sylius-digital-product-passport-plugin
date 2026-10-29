@@ -1,0 +1,32 @@
+/public/assets
+/public/css
+/public/js
+/public/media
+!/public/media/image/.gitkeep
+
+###> project files ###
+/composer.lock
+###< project files ###
+
+###> dependencies ###
+/vendor/
+###< dependencies ###
+
+###> symfony/framework-bundle ###
+/public/bundles
+.env.*.local
+.env.local
+.env.local.php
+###< symfony/framework-bundle ###
+
+###> symfony/webpack-encore-bundle ###
+/node_modules/
+/public/build/
+/npm-debug.log
+/yarn-error.log
+/yarn.lock
+###< symfony/webpack-encore-bundle ###
+
+###> lexik/jwt-authentication-bundle ###
+/config/jwt/*.pem
+###< lexik/jwt-authentication-bundle ###

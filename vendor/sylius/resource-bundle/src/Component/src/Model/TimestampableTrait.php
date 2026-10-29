@@ -1,0 +1,47 @@
+<?php
+
+/*
+ * This file is part of the Sylius package.
+ *
+ * (c) Sylius Sp. z o.o.
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+
+declare(strict_types=1);
+
+namespace Sylius\Resource\Model;
+
+trait TimestampableTrait
+{
+    /** @var \DateTimeInterface|null */
+    protected $createdAt;
+
+    /** @var \DateTimeInterface|null */
+    protected $updatedAt;
+
+    public function getCreatedAt(): ?\DateTimeInterface
+    {
+        return $this->createdAt;
+    }
+
+    public function setCreatedAt(?\DateTimeInterface $createdAt): void
+    {
+        $this->createdAt = $createdAt;
+    }
+
+    public function getUpdatedAt(): ?\DateTimeInterface
+    {
+        return $this->updatedAt;
+    }
+
+    public function setUpdatedAt(?\DateTimeInterface $updatedAt): void
+    {
+        $this->updatedAt = $updatedAt;
+    }
+}
+
+if (!class_exists(\Sylius\Component\Resource\Model\TimestampableTrait::class, false)) {
+    class_alias(TimestampableTrait::class, \Sylius\Component\Resource\Model\TimestampableTrait::class);
+}

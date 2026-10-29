@@ -1,0 +1,592 @@
+<?php
+
+/*
+ * This file is part of the API Platform project.
+ *
+ * (c) Kévin Dunglas <dunglas@gmail.com>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+
+declare(strict_types=1);
+
+namespace ApiPlatform\Metadata\Resource\Factory;
+
+use ApiPlatform\Doctrine\Common\Filter\ManagerRegistryAwareInterface;
+use ApiPlatform\Doctrine\Common\Filter\PropertyAwareFilterInterface;
+use ApiPlatform\Metadata\ApiProperty;
+use ApiPlatform\Metadata\Exception\RuntimeException;
+use ApiPlatform\Metadata\FilterInterface;
+use ApiPlatform\Metadata\JsonSchemaFilterInterface;
+use ApiPlatform\Metadata\OpenApiParameterFilterInterface;
+use ApiPlatform\Metadata\Operation;
+use ApiPlatform\Metadata\Parameter;
+use ApiPlatform\Metadata\ParameterProviderFilterInterface;
+use ApiPlatform\Metadata\Parameters;
+use ApiPlatform\Metadata\PropertiesAwareInterface;
+use ApiPlatform\Metadata\Property\Factory\PropertyMetadataFactoryInterface;
+use ApiPlatform\Metadata\Property\Factory\PropertyNameCollectionFactoryInterface;
+use ApiPlatform\Metadata\Query;
+use ApiPlatform\Metadata\QueryParameter;
+use ApiPlatform\Metadata\Resource\ResourceMetadataCollection;
+use ApiPlatform\Metadata\ResourceClassResolverInterface;
+use ApiPlatform\Metadata\Util\ResourceClassInfoTrait;
+use ApiPlatform\OpenApi\Model\Parameter as OpenApiParameter;
+use ApiPlatform\Serializer\Filter\FilterInterface as SerializerFilterInterface;
+use ApiPlatform\State\Parameter\ValueCaster;
+use ApiPlatform\State\Util\StateOptionsTrait;
+use Psr\Container\ContainerInterface;
+use Psr\Log\LoggerInterface;
+use Symfony\Component\Serializer\NameConverter\NameConverterInterface;
+use Symfony\Component\TypeInfo\Type;
+use Symfony\Component\TypeInfo\TypeIdentifier;
+
+/**
+ * Prepares Parameters documentation by reading its filter details and declaring an OpenApi parameter.
+ */
+final class ParameterResourceMetadataCollectionFactory implements ResourceMetadataCollectionFactoryInterface
+{
+    use ResourceClassInfoTrait;
+    use StateOptionsTrait;
+
+    private array $localPropertyCache = [];
+
+    public function __construct(
+        private readonly PropertyNameCollectionFactoryInterface $propertyNameCollectionFactory,
+        private readonly PropertyMetadataFactoryInterface $propertyMetadataFactory,
+        private readonly ?ResourceMetadataCollectionFactoryInterface $decorated = null,
+        private readonly ?ContainerInterface $filterLocator = null,
+        private readonly ?NameConverterInterface $nameConverter = null,
+        private readonly ?LoggerInterface $logger = null,
+        ?ResourceClassResolverInterface $resourceClassResolver = null,
+    ) {
+        $this->resourceClassResolver = $resourceClassResolver;
+        $this->resourceMetadataFactory = $this->decorated;
+    }
+
+    public function create(string $resourceClass): ResourceMetadataCollection
+    {
+        $resourceMetadataCollection = $this->decorated?->create($resourceClass) ?? new ResourceMetadataCollection($resourceClass);
+
+        $declaredOperationClasses = $this->getDeclaredOperationClasses($resourceMetadataCollection);
+
+        foreach ($resourceMetadataCollection as $i => $resource) {
+            $operations = $resource->getOperations();
+
+            $internalPriority = -1;
+            foreach ($operations as $operationName => $operation) {
+                $parameters = $this->getDefaultParameters($operation, $resourceClass, $internalPriority, $declaredOperationClasses);
+                if (\count($parameters) > 0) {
+                    $operations->add($operationName, $operation->withParameters($parameters));
+                }
+            }
+
+            $resourceMetadataCollection[$i] = $resource->withOperations($operations->sort());
+
+            if (!$graphQlOperations = $resource->getGraphQlOperations()) {
+                continue;
+            }
+
+            $internalPriority = -1;
+            foreach ($graphQlOperations as $operationName => $operation) {
+                $parameters = $this->getDefaultParameters($operation, $resourceClass, $internalPriority, $declaredOperationClasses);
+                if (\count($parameters) > 0) {
+                    $graphQlOperations[$operationName] = $operation->withParameters($parameters);
+                }
+            }
+
+            $resourceMetadataCollection[$i] = $resource->withGraphQlOperations($graphQlOperations);
+        }
+
+        return $resourceMetadataCollection;
+    }
+
+    /**
+     * @return array{propertyNames: string[], properties: array<string, ApiProperty>}
+     */
+    private function getProperties(string $resourceClass, ?Parameter $parameter = null, ?Operation $operation = null): array
+    {
+        $filterClass = $parameter?->getFilterClass();
+        if (null === $filterClass && null !== $operation) {
+            $filterClass = $this->getStateOptionsClass($operation, $resourceClass);
+        }
+        $filterClass ??= $resourceClass;
+
+        // Build cache key including the parameter's key or property to avoid collisions
+        $paramKey = '';
+        if ($parameter) {
+            $paramKey = $parameter->getProperties() ? ($parameter->getKey() ?? '') : ($parameter->getProperty() ?? $parameter->getKey() ?? '');
+        }
+        // Include properties list so repeated `:property` templates with disjoint properties get distinct cache entries.
+        $paramProperties = $parameter?->getProperties() ? '['.implode(',', $parameter->getProperties()).']' : '';
+        $k = $resourceClass.$paramKey.$paramProperties.(\is_string($parameter->getFilter()) ? $parameter->getFilter() : '').$filterClass;
+        if (isset($this->localPropertyCache[$k])) {
+            return $this->localPropertyCache[$k];
+        }
+
+        $propertyNames = [];
+        $properties = [];
+
+        // Get the list of properties to process
+        $propertiesToProcess = $parameter?->getProperties();
+        if (null === $propertiesToProcess && null !== $parameter && null !== $parameter->getProperty()) {
+            // If plural properties not set but singular property is, use that
+            $propertiesToProcess = [$parameter->getProperty()];
+        }
+        $propertiesToProcess ??= $this->propertyNameCollectionFactory->create($filterClass);
+
+        foreach ($propertiesToProcess as $property) {
+            if (str_contains($property, '.')) {
+                $parts = explode('.', $property);
+                $currentClass = $filterClass;
+                $relationSegments = [];
+                $convertedRelationSegments = [];
+                $relationClasses = [];
+                $traversalSuccessful = true;
+
+                foreach ($parts as $i => $part) {
+                    $isLastPart = ($i === \count($parts) - 1);
+
+                    try {
+                        $propertyMetadata = $this->propertyMetadataFactory->create($currentClass, $part);
+                    } catch (\Exception $e) {
+                        $traversalSuccessful = false;
+                        break;
+                    }
+
+                    if (!$isLastPart) {
+                        // Store relation information
+                        $relationSegments[] = $part;
+                        $relationClasses[] = $currentClass;
+
+                        // Apply name conversion to relation segment
+                        $convertedPart = $this->nameConverter?->normalize($part) ?? $part;
+                        $convertedRelationSegments[] = $convertedPart;
+
+                        // Try to get the class name from property type
+                        $nextClass = $this->getClassNameFromProperty($propertyMetadata);
+
+                        if (!$nextClass) {
+                            $traversalSuccessful = false;
+                            break;
+                        }
+
+                        $currentClass = $nextClass;
+                    }
+
+                    if ($propertyMetadata->isReadable()) {
+                        // For leaf property, apply name conversion and store full metadata
+                        if ($isLastPart) {
+                            $propertyNames[] = $property;
+                            $leafProperty = $this->nameConverter?->normalize($part) ?? $part;
+
+                            $properties[$property] = $propertyMetadata->withExtraProperties([
+                                ...$propertyMetadata->getExtraProperties(),
+                                'nested_property_info' => [
+                                    'relation_segments' => $relationSegments,
+                                    'converted_relation_segments' => $convertedRelationSegments,
+                                    'relation_classes' => $relationClasses,
+                                    'leaf_property' => $leafProperty,
+                                    'leaf_class' => $currentClass,
+                                ],
+                            ]);
+                        } else {
+                            $properties[$property] = $propertyMetadata;
+                        }
+                    }
+
+                    continue;
+                }
+
+                // If traversal wasn't fully successful but the property was explicitly listed
+                // (e.g., in parameter's properties array for placeholder expansion), still include it
+                if (!$traversalSuccessful && !\in_array($property, $propertyNames, true)) {
+                    $propertyNames[] = $property;
+                }
+
+                // Skip the simple property processing below for nested properties
+                continue;
+            }
+
+            $propertyMetadata = $this->propertyMetadataFactory->create($filterClass, $property);
+            if ($propertyMetadata->isReadable()) {
+                $propertyNames[] = $property;
+                $properties[$property] = $propertyMetadata;
+            }
+        }
+
+        if (($filter = $this->getFilterInstance($parameter->getFilter())) && $filter instanceof PropertyAwareFilterInterface) {
+            $filterProperties = array_keys($filter->getProperties() ?? []);
+
+            foreach ($filterProperties as $prop) {
+                if (!\in_array($prop, $propertyNames, true)) {
+                    $propertyNames[] = $this->nameConverter?->denormalize($prop) ?? $prop;
+                }
+            }
+        }
+
+        $this->localPropertyCache[$k] = ['propertyNames' => $propertyNames, 'properties' => $properties];
+
+        return $this->localPropertyCache[$k];
+    }
+
+    /**
+     * @param list<class-string<Operation>> $declaredOperationClasses
+     */
+    private function getDefaultParameters(Operation $operation, string $resourceClass, int &$internalPriority, array $declaredOperationClasses): Parameters
+    {
+        $propertyNames = $properties = [];
+        $existingParameters = $operation->getParameters();
+        $parameters = $existingParameters ? clone $existingParameters : new Parameters();
+
+        foreach ($this->createParametersFromAttributes($operation, $declaredOperationClasses) as $key => $parameter) {
+            if (!str_contains($key, ':property') && $parameters->has($key, $parameter::class)) {
+                continue;
+            }
+
+            $parameters->add($key, $parameter);
+        }
+
+        // Spike (RFC 10008 QUERY): when the operation has a dedicated input DTO, discover the
+        // #[QueryParameter] attributes declared on its properties so the object describes both the
+        // documented body (OpenApiFactory references its input schema) and the filtering criteria.
+        $input = $operation->getInput();
+        $inputClass = \is_array($input) ? ($input['class'] ?? null) : (\is_string($input) ? $input : null);
+        if ($operation instanceof Query && null !== $inputClass && $inputClass !== $resourceClass && class_exists($inputClass)) {
+            foreach ((new \ReflectionClass($inputClass))->getProperties() as $reflectionProperty) {
+                foreach ($reflectionProperty->getAttributes(QueryParameter::class, \ReflectionAttribute::IS_INSTANCEOF) as $attribute) {
+                    $name = $reflectionProperty->getName();
+                    if ($parameters->has($name, QueryParameter::class)) {
+                        continue;
+                    }
+
+                    $parameter = $attribute->newInstance();
+                    if (!$parameter->getKey()) {
+                        $parameter = $parameter->withKey($name);
+                    }
+                    if (!$parameter->getProperty()) {
+                        $parameter = $parameter->withProperty($name);
+                    }
+
+                    $parameters->add($parameter->getKey(), $parameter);
+                }
+            }
+        }
+
+        // First loop we look for the :property placeholder and replace its key
+        foreach ($parameters as $key => $parameter) {
+            if (!str_contains($key, ':property')) {
+                continue;
+            }
+
+            if (!$parameter->getKey()) {
+                $parameter = $parameter->withKey($key);
+            }
+
+            ['propertyNames' => $propertyNames, 'properties' => $properties] = $this->getProperties($resourceClass, $parameter, $operation);
+            $parameter = $parameter->withProperties($propertyNames);
+
+            foreach ($propertyNames as $property) {
+                if (str_contains($property, '.')) {
+                    $converted = $property;
+                } else {
+                    $converted = $this->nameConverter?->denormalize($property) ?? $property;
+                }
+                $finalKey = str_replace(':property', $converted, $key);
+                $parameters->add(
+                    $finalKey,
+                    $parameter->withProperty($converted)->withKey($finalKey)
+                );
+            }
+
+            $parameters->remove($key, $parameter::class);
+        }
+
+        foreach ($parameters as $key => $parameter) {
+            if (!$parameter->getKey()) {
+                $parameter = $parameter->withKey($key);
+            }
+
+            $filter = $this->getFilterInstance($parameter->getFilter());
+
+            // The filter has a parameter provider
+            if (null === $parameter->getProvider() && ($f = $parameter->getFilter()) && is_a($f, ParameterProviderFilterInterface::class, true)) {
+                $parameter = $parameter->withProvider($f::getParameterProvider());
+            }
+
+            $key = $parameter->getKey();
+
+            ['propertyNames' => $propertyNames, 'properties' => $properties] = $this->getProperties($resourceClass, $parameter, $operation);
+
+            if ($filter instanceof PropertiesAwareInterface) {
+                $parameter = $parameter->withProperties($propertyNames);
+            }
+
+            $parameter = $this->setDefaults($key, $parameter, $filter, $properties, $operation);
+            // We don't do any type cast yet, a query parameter or an header is always a string or a list of strings
+            if (null === $parameter->getNativeType()) {
+                // this forces the type to be only a list
+                if ('array' === ($parameter->getSchema()['type'] ?? null)) {
+                    $parameter = $parameter->withNativeType(Type::list(Type::string()));
+                } elseif ('string' === ($parameter->getSchema()['type'] ?? null)) {
+                    $parameter = $parameter->withNativeType(Type::string());
+                } elseif ('boolean' === ($parameter->getSchema()['type'] ?? null)) {
+                    $parameter = $parameter->withNativeType(Type::bool());
+                } elseif ('integer' === ($parameter->getSchema()['type'] ?? null)) {
+                    $parameter = $parameter->withNativeType(Type::int());
+                } elseif ('number' === ($parameter->getSchema()['type'] ?? null)) {
+                    $parameter = $parameter->withNativeType(Type::float());
+                } else {
+                    $parameter = $parameter->withNativeType(Type::union(Type::string(), Type::list(Type::string())));
+                }
+            }
+
+            if ($parameter->getCastToNativeType() && null === $parameter->getCastFn() && ($nativeType = $parameter->getNativeType())) {
+                if ($nativeType->isIdentifiedBy(TypeIdentifier::BOOL)) {
+                    $parameter = $parameter->withCastFn([ValueCaster::class, 'toBool']);
+                }
+                if ($nativeType->isIdentifiedBy(TypeIdentifier::INT)) {
+                    $parameter = $parameter->withCastFn([ValueCaster::class, 'toInt']);
+                }
+                if ($nativeType->isIdentifiedBy(TypeIdentifier::FLOAT)) {
+                    $parameter = $parameter->withCastFn([ValueCaster::class, 'toFloat']);
+                }
+            }
+
+            if ($parameter->getCastToNativeType() && null === $parameter->getCastFn()) {
+                $propertyKey = $parameter->getProperty() ?? $key;
+                $propNativeType = ($properties[$propertyKey] ?? null)?->getNativeType();
+                if ($propNativeType && $propNativeType->isIdentifiedBy(\DateTimeInterface::class)) {
+                    $parameter = $parameter->withCastFn([ValueCaster::class, 'toDateTime']);
+                }
+            }
+
+            $priority = $parameter->getPriority() ?? $internalPriority--;
+            $parameters->add($key, $parameter->withPriority($priority));
+        }
+
+        $parameters->sort();
+
+        return $parameters;
+    }
+
+    private function addFilterMetadata(Parameter $parameter): Parameter
+    {
+        if (!$filter = $this->getFilterInstance($parameter->getFilter())) {
+            return $parameter;
+        }
+
+        if (null === $parameter->getProvider() && $filter instanceof ParameterProviderFilterInterface) {
+            $parameter = $parameter->withProvider($filter::getParameterProvider());
+        }
+
+        if (null === $parameter->getSchema() && $filter instanceof JsonSchemaFilterInterface && $schema = $filter->getSchema($parameter)) {
+            $parameter = $parameter->withSchema($schema);
+        }
+
+        if (null === $parameter->getOpenApi() && $filter instanceof OpenApiParameterFilterInterface
+            && class_exists(OpenApiParameter::class) && ($openApiParameter = $filter->getOpenApiParameters($parameter))) {
+            $parameter = $parameter->withOpenApi($openApiParameter);
+        }
+
+        return $parameter;
+    }
+
+    /**
+     * @param array<string, ApiProperty> $properties
+     */
+    private function setDefaults(string $key, Parameter $parameter, ?object $filter, array $properties, Operation $operation): Parameter
+    {
+        if (null === $parameter->getKey()) {
+            $parameter = $parameter->withKey($key);
+        }
+
+        if ($filter instanceof SerializerFilterInterface && null === $parameter->getProvider()) {
+            $parameter = $parameter->withProvider('api_platform.serializer.filter_parameter_provider');
+        }
+
+        if (null === $parameter->getProperty() && isset($properties[$key])) {
+            $parameter = $parameter->withProperty($key);
+        }
+
+        // Transfer nested property metadata from ApiProperty to Parameter
+        // Always use nested_properties_info (plural) as a map keyed by original property path
+        $propertyKey = $parameter->getProperty() ?? $key;
+        $nestedPropertiesInfo = [];
+        if (isset($properties[$propertyKey])) {
+            $apiPropertyExtraProps = $properties[$propertyKey]->getExtraProperties();
+            if (isset($apiPropertyExtraProps['nested_property_info'])) {
+                $nestedInfo = $apiPropertyExtraProps['nested_property_info'];
+                $nestedPropertiesInfo[$propertyKey] = $nestedInfo;
+
+                $fullPath = implode('.', [...$nestedInfo['converted_relation_segments'], $nestedInfo['leaf_property']]);
+                $parameter = $parameter->withProperty($fullPath);
+            }
+        } else {
+            foreach ($properties as $propPath => $apiProperty) {
+                $apiPropExtra = $apiProperty->getExtraProperties();
+                if (isset($apiPropExtra['nested_property_info'])) {
+                    $nestedPropertiesInfo[$propPath] = $apiPropExtra['nested_property_info'];
+                }
+            }
+        }
+
+        if ($nestedPropertiesInfo) {
+            $parameter = $parameter->withExtraProperties([
+                ...$parameter->getExtraProperties(),
+                'nested_properties_info' => $nestedPropertiesInfo,
+            ]);
+        }
+
+        if ($this->nameConverter && $property = $parameter->getProperty()) {
+            // Skip name conversion if we already have nested property info
+            $paramExtraProps = $parameter->getExtraProperties();
+            if (!isset($paramExtraProps['nested_properties_info'])) {
+                // Keep the original (non name-converted) property to build the query while the public property matches the API naming convention.
+                $parameter = $parameter
+                    ->withExtraProperties([...$paramExtraProps, 'query_property' => $property])
+                    ->withProperty($this->nameConverter->normalize($property));
+            }
+        }
+
+        if (isset($properties[$propertyKey]) && ($eloquentRelation = ($properties[$propertyKey]->getExtraProperties()['eloquent_relation'] ?? null)) && isset($eloquentRelation['foreign_key'])) {
+            $parameter = $parameter->withProperty($eloquentRelation['foreign_key']);
+        }
+
+        $parameter = $this->addFilterMetadata($parameter);
+
+        if ($filter instanceof FilterInterface) {
+            try {
+                return $this->getLegacyFilterMetadata($parameter, $operation, $filter);
+            } catch (RuntimeException $exception) {
+                // An inline filter instance never gets a ManagerRegistry, unlike one resolved as a service
+                // through the filter locator: failing to describe it is expected, not an alert-worthy event.
+                if ($filter instanceof ManagerRegistryAwareInterface && !$filter->hasManagerRegistry()) {
+                    $this->logger?->debug($exception->getMessage(), ['exception' => $exception]);
+                } else {
+                    $this->logger?->alert($exception->getMessage(), ['exception' => $exception]);
+                }
+
+                return $parameter;
+            }
+        }
+
+        return $parameter;
+    }
+
+    private function getLegacyFilterMetadata(Parameter $parameter, Operation $operation, FilterInterface $filter): Parameter
+    {
+        $description = $filter->getDescription($this->getStateOptionsClass($operation, $operation->getClass()));
+        $key = $parameter->getKey();
+        if (($schema = $description[$key]['schema'] ?? null) && null === $parameter->getSchema()) {
+            $parameter = $parameter->withSchema($schema);
+        }
+
+        if (null === $parameter->getProperty() && ($property = $description[$key]['property'] ?? null)) {
+            $parameter = $parameter->withProperty($property);
+        }
+
+        if (null === $parameter->getRequired() && ($required = $description[$key]['required'] ?? null)) {
+            $parameter = $parameter->withRequired($required);
+        }
+
+        if (null === $parameter->getOpenApi() && ($openApi = $description[$key]['openapi'] ?? null) && $openApi instanceof OpenApiParameter) {
+            $parameter = $parameter->withOpenApi($openApi);
+        }
+
+        return $parameter;
+    }
+
+    /**
+     * TODO: 5.x use FilterInterface on Laravel eloquent filters.
+     *
+     * @return FilterInterface|object
+     */
+    private function getFilterInstance(object|string|null $filter): ?object
+    {
+        if (!$filter) {
+            return null;
+        }
+
+        if (\is_object($filter)) {
+            return $filter;
+        }
+
+        if (!$this->filterLocator || !$this->filterLocator->has($filter)) {
+            return null;
+        }
+
+        return $this->filterLocator->get($filter);
+    }
+
+    /**
+     * @param list<class-string<Operation>> $declaredOperationClasses
+     */
+    private function createParametersFromAttributes(Operation $operation, array $declaredOperationClasses): Parameters
+    {
+        $parameters = new Parameters();
+
+        if (null === $resourceClass = $operation->getClass()) {
+            return $parameters;
+        }
+
+        foreach ((new \ReflectionClass($resourceClass))->getProperties() as $reflectionProperty) {
+            foreach ($reflectionProperty->getAttributes(Parameter::class, \ReflectionAttribute::IS_INSTANCEOF) as $attribute) {
+                $parameter = $attribute->newInstance();
+                $propertyName = $reflectionProperty->getName();
+
+                if (null !== ($parameterOperations = $parameter->getOperations())) {
+                    $parameterOperationClasses = array_map(static fn (Operation|string $parameterOperation): string => \is_string($parameterOperation) ? $parameterOperation : $parameterOperation::class, $parameterOperations);
+
+                    foreach ($parameterOperationClasses as $parameterOperationClass) {
+                        if (!\in_array($parameterOperationClass, $declaredOperationClasses, true)) {
+                            throw new RuntimeException(\sprintf('Parameter attribute on property "%s" is restricted to the operation "%s" which is not declared on the resource "%s".', $propertyName, $parameterOperationClass, $resourceClass));
+                        }
+                    }
+
+                    if (!\in_array($operation::class, $parameterOperationClasses, true)) {
+                        continue;
+                    }
+                }
+
+                $key = $parameter->getKey() ?? $propertyName;
+
+                if (null === $parameterPropertyName = $parameter->getProperty()) {
+                    $parameter = $parameter->withProperty($propertyName);
+                } elseif ($parameterPropertyName !== $propertyName) {
+                    throw new RuntimeException(\sprintf('Parameter attribute on property "%s" must target itself or have no explicit property. Got "property: \'%s\'" instead.', $propertyName, $parameterPropertyName));
+                }
+
+                if (null === ($parameterProperties = $parameter->getProperties()) || \in_array($propertyName, $parameterProperties, true)) {
+                    $parameter = $parameter->withProperties([$propertyName]);
+                } elseif (!\in_array($propertyName, $parameterProperties, true)) {
+                    throw new RuntimeException(\sprintf('Parameter attribute on property "%s" must target itself or have no explicit properties. Got "properties: [%s]" instead.', $propertyName, implode(', ', $parameterProperties)));
+                }
+
+                $parameters->add($key, $parameter);
+            }
+        }
+
+        return $parameters;
+    }
+
+    /**
+     * @return list<class-string<Operation>>
+     */
+    private function getDeclaredOperationClasses(ResourceMetadataCollection $resourceMetadataCollection): array
+    {
+        $operationClasses = [];
+        foreach ($resourceMetadataCollection as $resource) {
+            foreach ($resource->getOperations() ?? [] as $operation) {
+                $operationClasses[] = $operation::class;
+            }
+
+            foreach ($resource->getGraphQlOperations() ?? [] as $operation) {
+                $operationClasses[] = $operation::class;
+            }
+        }
+
+        return $operationClasses;
+    }
+}

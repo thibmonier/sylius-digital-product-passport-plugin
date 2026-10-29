@@ -1,0 +1,2 @@
+# Plugin routes only (TestApplication loads Sylius routes automatically)
+{}

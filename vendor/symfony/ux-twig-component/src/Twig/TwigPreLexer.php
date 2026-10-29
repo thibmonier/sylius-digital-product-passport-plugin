@@ -1,0 +1,734 @@
+<?php
+
+/*
+ * This file is part of the Symfony package.
+ *
+ * (c) Fabien Potencier <fabien@symfony.com>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+
+namespace Symfony\UX\TwigComponent\Twig;
+
+use Twig\Error\SyntaxError;
+use Twig\Lexer;
+
+/**
+ * Rewrites <twig:component> syntaxes to {% component %} syntaxes.
+ */
+class TwigPreLexer
+{
+    private const VERBATIM_REGEX = '/\G\{%[-~]?\s*verbatim\s*[-~]?%\}/';
+    private const ENDVERBATIM_REGEX = '/\{%[-~]?\s*endverbatim\s*[-~]?%\}/';
+
+    private string $input;
+    private int $length;
+    private int $position = 0;
+    private int $line;
+    /**
+     * @var array<array{name: string, hasDefaultBlock: bool}>
+     */
+    private array $currentComponents = [];
+
+    public function __construct(int $startingLine = 1)
+    {
+        $this->line = $startingLine;
+    }
+
+    public function preLexComponents(string $input): string
+    {
+        if (!str_contains($input, '<twig:')) {
+            return $input;
+        }
+
+        $this->input = $input = str_replace(["\r\n", "\r"], "\n", $input);
+        $this->length = \strlen($input);
+        $output = '';
+
+        $inTwigEmbed = false;
+
+        while ($this->position < $this->length) {
+            // copy text up to the next character that can start a tag or a component,
+            // unless a component still has to open its default block before its content
+            $char = $this->input[$this->position];
+            if ('{' !== $char && '<' !== $char
+                && (empty($this->currentComponents) || $this->currentComponents[\count($this->currentComponents) - 1]['hasDefaultBlock'])
+            ) {
+                $text = substr($this->input, $this->position, strcspn($this->input, '{<', $this->position));
+                $this->line += substr_count($text, "\n");
+                $this->position += \strlen($text);
+                $output .= $text;
+
+                continue;
+            }
+
+            // ignore content inside verbatim block #947
+            if ('{' === $this->input[$this->position] && preg_match(self::VERBATIM_REGEX, $this->input, $matches, 0, $this->position)) {
+                if (!empty($this->currentComponents)
+                    && !$this->currentComponents[\count($this->currentComponents) - 1]['hasDefaultBlock']) {
+                    $output .= '{% block content %}';
+                    $this->currentComponents[\count($this->currentComponents) - 1]['hasDefaultBlock'] = true;
+                }
+
+                $output .= $this->consumeVerbatim($matches[0]);
+
+                if ($this->position === $this->length) {
+                    break;
+                }
+            }
+
+            // ignore content inside twig comments, see #838
+            if ($this->consume('{#')) {
+                $output .= '{#';
+                $output .= $this->consumeUntil('#}');
+                $this->consume('#}');
+                $output .= '#}';
+
+                if ($this->position === $this->length) {
+                    break;
+                }
+            }
+
+            // ignore content inside twig output expressions, see #3514
+            // (so that e.g. `{{ '{# foo #}' }}` doesn't trip the comment handler above)
+            if ($this->check('{{')) {
+                // a Twig expression is content: open the default block if we're inside a component
+                if (!empty($this->currentComponents)
+                    && !$this->currentComponents[\count($this->currentComponents) - 1]['hasDefaultBlock']
+                ) {
+                    $output .= '{% block content %}';
+                    $this->currentComponents[\count($this->currentComponents) - 1]['hasDefaultBlock'] = true;
+                }
+
+                $this->consume('{{');
+                $output .= '{{';
+                $output .= $this->consumeTwigExpressionContent('}}');
+                if ($this->consume('}}')) {
+                    $output .= '}}';
+                }
+
+                if ($this->position === $this->length) {
+                    break;
+                }
+
+                continue;
+            }
+
+            if ($this->consume('{% embed')) {
+                $inTwigEmbed = true;
+                $output .= '{% embed';
+                $output .= $this->consumeUntil('%}');
+
+                continue;
+            }
+
+            if ($this->consume('{% endembed %}')) {
+                $inTwigEmbed = false;
+                $output .= '{% endembed %}';
+
+                continue;
+            }
+
+            $isTwigHtmlOpening = $this->consume('<twig:');
+            $isTraditionalBlockOpening = false;
+
+            if ($isTwigHtmlOpening || (0 !== \count($this->currentComponents) && $isTraditionalBlockOpening = $this->consume('{% block'))) {
+                $componentName = $isTraditionalBlockOpening ? 'block' : $this->consumeComponentName();
+
+                if ('block' === $componentName) {
+                    // if we're already inside the "default" block, let's close it
+                    if (!empty($this->currentComponents) && $this->currentComponents[\count($this->currentComponents) - 1]['hasDefaultBlock'] && !$inTwigEmbed) {
+                        $output .= '{% endblock %}';
+
+                        $this->currentComponents[\count($this->currentComponents) - 1]['hasDefaultBlock'] = false;
+                    }
+
+                    if ($isTraditionalBlockOpening) {
+                        // add what we've consumed so far
+                        $output .= '{% block';
+                        $output .= $stringUntilClosingTag = $this->consumeUntil('%}');
+
+                        // If the last-consumed string does not match the Twig's block name regex, we assume the block is self-closing
+                        $isBlockSelfClosing = '' !== preg_replace(Lexer::REGEX_NAME, '', trim($stringUntilClosingTag));
+
+                        if ($isBlockSelfClosing && $this->consume('%}')) {
+                            $output .= '%}';
+                        } else {
+                            $output .= $this->consumeUntilEndBlock();
+                        }
+
+                        continue;
+                    }
+
+                    $output .= $this->consumeBlock($componentName);
+
+                    continue;
+                }
+
+                // if we're already inside a component,
+                // *and* we've just found a new component, then we should try to
+                // open the default block
+                if (!empty($this->currentComponents)
+                    && !$this->currentComponents[\count($this->currentComponents) - 1]['hasDefaultBlock']) {
+                    $output .= '{% block content %}';
+                    $this->currentComponents[\count($this->currentComponents) - 1]['hasDefaultBlock'] = true;
+                }
+
+                // Handle <twig:component is="..." /> and <twig:component is="{{ ... }}" />
+                $isDynamicComponent = false;
+                $componentExpression = $componentName;
+                if ('component' === strtolower($componentName)) {
+                    $resolved = $this->consumeDynamicComponentName();
+                    if (null !== $resolved) {
+                        $componentExpression = $resolved['expression'];
+                        $isDynamicComponent = $resolved['isDynamic'];
+                    }
+                }
+
+                $attributes = $this->consumeAttributes($componentName);
+                $isSelfClosing = $this->consume('/>');
+                if (!$isSelfClosing) {
+                    $this->consume('>');
+                    $this->currentComponents[] = ['name' => $componentName, 'hasDefaultBlock' => false];
+                }
+
+                if ($isDynamicComponent) {
+                    if ($isSelfClosing) {
+                        $output .= "{{ component({$componentExpression}".($attributes ? ", { {$attributes} }" : '').') }}';
+                    } else {
+                        $output .= "{% component ({$componentExpression})".($attributes ? " with { {$attributes} }" : '').' %}';
+                    }
+                } elseif ($isSelfClosing) {
+                    // use the simpler component() format, so that the system doesn't think
+                    // this is an "embedded" component with blocks
+                    // see https://github.com/symfony/ux/issues/810
+                    $output .= "{{ component('{$componentExpression}'".($attributes ? ", { {$attributes} }" : '').') }}';
+                } else {
+                    $output .= "{% component '{$componentExpression}'".($attributes ? " with { {$attributes} }" : '').' %}';
+                }
+
+                continue;
+            }
+
+            if (!empty($this->currentComponents) && $this->check('</twig:')) {
+                $this->consume('</twig:');
+                $closingComponentName = $this->consumeComponentName();
+                $this->consume('>');
+
+                $lastComponent = array_pop($this->currentComponents);
+                $lastComponentName = $lastComponent['name'];
+
+                if ($closingComponentName !== $lastComponentName) {
+                    throw new SyntaxError("Expected closing tag '</twig:{$lastComponentName}>' but found '</twig:{$closingComponentName}>'.", $this->line);
+                }
+
+                // we've reached the end of this component. If we're inside the
+                // default block, let's close it
+                if ($lastComponent['hasDefaultBlock']) {
+                    $output .= '{% endblock %}';
+                }
+
+                $output .= '{% endcomponent %}';
+
+                continue;
+            }
+
+            // copy any other Twig tag as is, so that a `<twig:` inside one of its strings or `#` comments
+            // (e.g. the `## ...` documentation of a prop) is not mistaken for a component
+            if ($this->check('{%')) {
+                // a Twig tag is content: open the default block if we're inside a component
+                if (!empty($this->currentComponents)
+                    && !$this->currentComponents[\count($this->currentComponents) - 1]['hasDefaultBlock']
+                ) {
+                    $output .= '{% block content %}';
+                    $this->currentComponents[\count($this->currentComponents) - 1]['hasDefaultBlock'] = true;
+                }
+
+                $this->consume('{%');
+                $output .= '{%';
+                $output .= $this->consumeTwigExpressionContent('%}');
+                if ($this->consume('%}')) {
+                    $output .= '%}';
+                }
+
+                continue;
+            }
+
+            $char = $this->input[$this->position];
+            if ("\n" === $char) {
+                ++$this->line;
+            }
+
+            // handle adding a default block if we find non-whitespace outside of a block
+            if (!empty($this->currentComponents)
+                && !$this->currentComponents[\count($this->currentComponents) - 1]['hasDefaultBlock']
+                && !ctype_space($char)
+                && !$this->check('{% block')
+            ) {
+                $this->currentComponents[\count($this->currentComponents) - 1]['hasDefaultBlock'] = true;
+                $output .= '{% block content %}';
+            }
+
+            $output .= $char;
+            $this->consumeChar();
+        }
+
+        if (!empty($this->currentComponents)) {
+            $lastComponent = array_pop($this->currentComponents)['name'];
+            throw new SyntaxError(\sprintf('Expected closing tag "</twig:%s>" not found.', $lastComponent), $this->line);
+        }
+
+        return $output;
+    }
+
+    /**
+     * Consumes a whole verbatim block, opening tag included, and returns it unchanged.
+     */
+    private function consumeVerbatim(string $openingTag): string
+    {
+        $this->line += substr_count($openingTag, "\n");
+        $this->position += \strlen($openingTag);
+
+        if (!preg_match(self::ENDVERBATIM_REGEX, $this->input, $matches, \PREG_OFFSET_CAPTURE, $this->position)) {
+            $consumed = substr($this->input, $this->position);
+        } else {
+            $consumed = substr($this->input, $this->position, $matches[0][1] - $this->position + \strlen($matches[0][0]));
+        }
+
+        $this->line += substr_count($consumed, "\n");
+        $this->position += \strlen($consumed);
+
+        return $openingTag.$consumed;
+    }
+
+    private function consumeComponentName(?string $customExceptionMessage = null): string
+    {
+        if (preg_match('/\G[A-Za-z0-9_:@\-.]+/', $this->input, $matches, 0, $this->position)) {
+            $componentName = $matches[0];
+            $this->position += \strlen($componentName);
+
+            return $componentName;
+        }
+
+        throw new SyntaxError($customExceptionMessage ?? 'Expected component name when resolving the "<twig:" syntax.', $this->line);
+    }
+
+    /**
+     * @return array{expression: string, isDynamic: bool}|null
+     */
+    private function consumeDynamicComponentName(): ?array
+    {
+        $savedPosition = $this->position;
+        $savedLine = $this->line;
+
+        $this->consumeWhitespace();
+
+        $isDynamic = false;
+
+        if ($this->consume(':is=')) {
+            $isDynamic = true;
+        } elseif ($this->consume('is=')) {
+            $isDynamic = false;
+        } else {
+            $this->position = $savedPosition;
+            $this->line = $savedLine;
+
+            return null;
+        }
+
+        $quote = $this->consumeChar(["'", '"']);
+        $componentExpression = $this->consumeUntil($quote);
+        $this->expectAndConsumeChar($quote);
+
+        if ('' === $componentExpression) {
+            throw new SyntaxError(\sprintf('The "%s" attribute of "<twig:component>" must not be empty', $isDynamic ? ':is' : 'is'), $this->line);
+        }
+
+        if (!$isDynamic && str_starts_with($componentExpression, '{{') && str_ends_with($componentExpression, '}}')) {
+            $componentExpression = trim(substr($componentExpression, 2, -2));
+            if ('' === $componentExpression) {
+                throw new SyntaxError('The "is" attribute of "<twig:component>" must not be empty.', $this->line);
+            }
+            $isDynamic = true;
+        }
+
+        return ['expression' => $componentExpression, 'isDynamic' => $isDynamic];
+    }
+
+    private function consumeAttributes(string $componentName): string
+    {
+        $attributes = [];
+
+        while ($this->position < $this->length && !$this->check('>') && !$this->check('/>')) {
+            $this->consumeWhitespace();
+            if ($this->check('>') || $this->check('/>')) {
+                break;
+            }
+
+            if ($this->check('{{...') || $this->check('{{ ...')) {
+                $this->consume('{{...');
+                $this->consume('{{ ...');
+                $attributes[] = '...'.trim($this->consumeUntil('}}'));
+                $this->consume('}}');
+
+                continue;
+            }
+
+            $isAttributeDynamic = false;
+
+            // :someProp="dynamicVar"
+            $this->consumeWhitespace();
+            if ($this->check(':')) {
+                $this->consume(':');
+                $isAttributeDynamic = true;
+            }
+
+            $message = \sprintf('Expected attribute name when parsing the "<twig:%s" syntax.', $componentName);
+            // was called 'consumeAttributeName'
+            $key = $this->consumeComponentName($message);
+
+            // <twig:component someProp> -> someProp: true
+            if (!$this->check('=')) {
+                $this->consumeWhitespace();
+                // don't allow "<twig:component :someProp>"
+                if ($isAttributeDynamic) {
+                    throw new SyntaxError(\sprintf('Expected "=" after ":%s" when parsing the "<twig:%s" syntax.', $key, $componentName), $this->line);
+                }
+
+                $attributes[] = \sprintf('%s: true', preg_match('/[-:@]/', $key) ? "'$key'" : $key);
+                $this->consumeWhitespace();
+                continue;
+            }
+
+            $this->expectAndConsumeChar('=');
+            $quote = $this->consumeChar(["'", '"']);
+
+            if ($isAttributeDynamic) {
+                // :someProp="dynamicVar"
+                $attributeValue = $this->consumeUntil($quote);
+            } else {
+                $attributeValue = $this->consumeAttributeValue($quote);
+            }
+
+            $attributes[] = \sprintf('%s: %s', preg_match('/[-:@]/', $key) ? "'$key'" : $key, '' === $attributeValue ? "''" : $attributeValue);
+
+            $this->expectAndConsumeChar($quote);
+            $this->consumeWhitespace();
+        }
+
+        return implode(', ', $attributes);
+    }
+
+    /**
+     * If the next character(s) exactly matches the given string, then
+     * consume it (move forward) and return true.
+     */
+    private function consume(string $string): bool
+    {
+        $length = \strlen($string);
+
+        if ($this->position + $length <= $this->length && 0 === substr_compare($this->input, $string, $this->position, $length)) {
+            $this->position += $length;
+
+            return true;
+        }
+
+        return false;
+    }
+
+    private function consumeChar($validChars = null): string
+    {
+        if ($this->position >= $this->length) {
+            throw new SyntaxError('Unexpected end of input.', $this->line);
+        }
+
+        $char = $this->input[$this->position];
+
+        if (null !== $validChars && !\in_array($char, (array) $validChars, true)) {
+            throw new SyntaxError('Expected one of [.'.implode('', (array) $validChars)."] but found '{$char}'.", $this->line);
+        }
+
+        ++$this->position;
+
+        return $char;
+    }
+
+    /**
+     * Moves the position forward until it finds $endString.
+     *
+     * Any string consumed *before* finding that string is returned.
+     * The position is moved forward to just *before* $endString.
+     */
+    private function consumeUntil(string $endString): string
+    {
+        if (false === $endPosition = strpos($this->input, $endString, $this->position)) {
+            $start = $this->position;
+            $this->position = $this->length;
+
+            return substr($this->input, $start);
+        }
+
+        $content = substr($this->input, $this->position, $endPosition - $this->position);
+        $this->line += substr_count($content, "\n");
+        $this->position = $endPosition;
+
+        return $content;
+    }
+
+    private function consumeWhitespace(): void
+    {
+        $whitespace = substr($this->input, $this->position, strspn($this->input, " \t\n\r\0\x0B", $this->position));
+        $this->line += substr_count($whitespace, "\n");
+        $this->position += \strlen($whitespace);
+
+        if ($this->check('#')) {
+            $this->consume('#');
+            $this->consumeUntil("\n");
+            $this->consumeWhitespace();
+        }
+    }
+
+    /**
+     * Checks that the next character is the one given and consumes it.
+     */
+    private function expectAndConsumeChar(string $char): void
+    {
+        if (1 !== \strlen($char)) {
+            throw new \InvalidArgumentException('Expected a single character.');
+        }
+
+        if ($this->position >= $this->length) {
+            throw new SyntaxError("Expected '{$char}' but reached the end of the file.", $this->line);
+        }
+
+        if ($this->input[$this->position] !== $char) {
+            throw new SyntaxError("Expected '{$char}' but found '{$this->input[$this->position]}'.", $this->line);
+        }
+
+        ++$this->position;
+    }
+
+    private function check(string $chars): bool
+    {
+        return $this->position + \strlen($chars) <= $this->length
+            && 0 === substr_compare($this->input, $chars, $this->position, \strlen($chars));
+    }
+
+    private function isNameChar(string $char): bool
+    {
+        return '' !== $char && (ctype_alnum($char) || str_contains('_:@-.', $char));
+    }
+
+    private function consumeBlock(string $componentName): string
+    {
+        $attributes = $this->consumeAttributes($componentName);
+        $this->consume('>');
+
+        $blockName = '';
+        foreach (explode(', ', $attributes) as $attr) {
+            [$key, $value] = explode(': ', $attr);
+            if ('name' === $key) {
+                $blockName = trim($value, "'");
+                break;
+            }
+        }
+
+        if (empty($blockName)) {
+            throw new SyntaxError('Expected block name.', $this->line);
+        }
+
+        $output = "{% block {$blockName} %}";
+
+        $closingTag = '</twig:block>';
+        if (false === strpos($this->input, $closingTag, $this->position)) {
+            throw new SyntaxError("Expected closing tag '{$closingTag}' for block '{$blockName}'.", $this->line);
+        }
+        $blockContents = $this->consumeUntilEndBlock();
+
+        $subLexer = new self($this->line);
+        $output .= $subLexer->preLexComponents($blockContents);
+
+        $this->consume($closingTag);
+        $output .= '{% endblock %}';
+
+        return $output;
+    }
+
+    private function consumeUntilEndBlock(): string
+    {
+        $start = $this->position;
+
+        $depth = 1;
+        $inComment = false;
+        while ($this->position < $this->length) {
+            $char = $this->input[$this->position];
+
+            // Each delimiter family starts with a distinct character, so ordinary
+            // template text runs no substr() at all and the rest run only theirs.
+            switch ($char) {
+                case '#':
+                    if ($inComment && '#}' === substr($this->input, $this->position, 2)) {
+                        $inComment = false;
+                    }
+                    break;
+
+                case '{':
+                    if ('{#' === substr($this->input, $this->position, 2)) {
+                        $inComment = true;
+                        break;
+                    }
+                    if ($inComment) {
+                        break;
+                    }
+
+                    if ('{% endblock %}' === substr($this->input, $this->position, 14)) {
+                        if (1 === $depth) {
+                            // in this case, we want to advance ALL the way beyond the endblock
+                            // strlen('{% endblock %}') = 14
+                            $this->position += 14;
+                            break 2;
+                        }
+
+                        --$depth;
+                    } elseif ('{% block' === substr($this->input, $this->position, 8)) {
+                        ++$depth;
+                    }
+                    break;
+
+                case '<':
+                    if ($inComment) {
+                        break;
+                    }
+
+                    if ('</twig:block>' === substr($this->input, $this->position, 13)) {
+                        if (1 === $depth) {
+                            break 2;
+                        }
+
+                        --$depth;
+                    } elseif ('<twig:block' === substr($this->input, $this->position, 11)
+                        && !$this->isNameChar($this->input[$this->position + 11] ?? '')
+                    ) {
+                        ++$depth;
+                    }
+                    break;
+
+                case "\n":
+                    ++$this->line;
+                    break;
+            }
+
+            ++$this->position;
+        }
+
+        return substr($this->input, $start, $this->position - $start);
+    }
+
+    /**
+     * Consumes the body of a Twig output expression or tag (between `{{` and `}}`, or `{%` and `%}`).
+     *
+     * String literals and `#` inline comments are skipped, so a closing delimiter inside them does not end the expression early.
+     */
+    private function consumeTwigExpressionContent(string $closingDelimiter): string
+    {
+        $start = $this->position;
+        $stopChars = "\"'#\n".$closingDelimiter[0];
+
+        while (($this->position += strcspn($this->input, $stopChars, $this->position)) < $this->length) {
+            if ($this->check($closingDelimiter)) {
+                return substr($this->input, $start, $this->position - $start);
+            }
+
+            $char = $this->input[$this->position];
+
+            if ("'" === $char || '"' === $char) {
+                $this->skipStringLiteral($char);
+                continue;
+            }
+
+            if ('#' === $char) {
+                $this->consumeUntil("\n");
+                continue;
+            }
+
+            if ("\n" === $char) {
+                ++$this->line;
+            }
+
+            ++$this->position;
+        }
+
+        return substr($this->input, $start);
+    }
+
+    private function skipStringLiteral(string $quote): void
+    {
+        ++$this->position; // opening quote
+
+        while ($this->position < $this->length) {
+            $char = $this->input[$this->position];
+
+            if ('\\' === $char && $this->position + 1 < $this->length) {
+                if ("\n" === $this->input[$this->position + 1]) {
+                    ++$this->line;
+                }
+                $this->position += 2;
+                continue;
+            }
+
+            if ($char === $quote) {
+                ++$this->position;
+
+                return;
+            }
+
+            if ("\n" === $char) {
+                ++$this->line;
+            }
+
+            ++$this->position;
+        }
+    }
+
+    private function consumeAttributeValue(string $quote): string
+    {
+        $parts = [];
+        $currentPart = '';
+        while ($this->position < $this->length) {
+            if ($this->check($quote)) {
+                break;
+            }
+
+            if ("\n" === $this->input[$this->position]) {
+                ++$this->line;
+            }
+
+            if ($this->check('{{')) {
+                // mark any previous static text as complete: push into parts
+                if ('' !== $currentPart) {
+                    $parts[] = \sprintf("'%s'", str_replace("'", "\'", $currentPart));
+                    $currentPart = '';
+                }
+
+                // consume the entire {{ }} block
+                $this->consume('{{');
+                $this->consumeWhitespace();
+                $parts[] = \sprintf('(%s)', rtrim($this->consumeUntil('}}')));
+                $this->expectAndConsumeChar('}');
+                $this->expectAndConsumeChar('}');
+
+                continue;
+            }
+
+            $currentPart .= $this->input[$this->position];
+            ++$this->position;
+        }
+
+        if ('' !== $currentPart) {
+            $parts[] = \sprintf("'%s'", str_replace("'", "\'", $currentPart));
+        }
+
+        return implode('~', $parts);
+    }
+}
