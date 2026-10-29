@@ -25,12 +25,18 @@ final class Version20261029150000 extends AbstractMigration
         $table->addColumn('origin_materials', Types::TEXT, ['notnull' => false, 'default' => null]);
         $table->addColumn('recyclability', Types::TEXT, ['notnull' => false, 'default' => null]);
         $table->addColumn('repairability', Types::TEXT, ['notnull' => false, 'default' => null]);
-        $table->addColumn('version', Types::INTEGER, ['notnull' => true, 'default' => 1]);
+        $table->addColumn('version', Types::INTEGER, ['notnull' => true]);
         $table->addColumn('created_at', Types::DATETIME_IMMUTABLE, ['notnull' => true]);
         $table->addColumn('updated_at', Types::DATETIME_IMMUTABLE, ['notnull' => true]);
 
         $table->setPrimaryKey(['id']);
-        $table->addUniqueIndex(['product_variant_id'], 'UNIQ_dpp_product_variant');
+        $table->addUniqueIndex(['product_variant_id']);
+        $table->addForeignKeyConstraint(
+            'sylius_product_variant',
+            ['product_variant_id'],
+            ['id'],
+            ['onDelete' => 'CASCADE'],
+        );
     }
 
     public function down(Schema $schema): void

@@ -21,28 +21,28 @@ class DigitalProductPassport
     #[ORM\JoinColumn(name: 'product_variant_id', referencedColumnName: 'id', nullable: false, onDelete: 'CASCADE')]
     private ProductVariantInterface $productVariant;
 
-    #[ORM\Column(type: Types::STRING, length: 14, nullable: true)]
+    #[ORM\Column(name: 'product_identifier', type: Types::STRING, length: 14, nullable: true)]
     private ?string $productIdentifier = null;
 
-    #[ORM\Column(type: Types::STRING, length: 255, nullable: true)]
+    #[ORM\Column(name: 'digital_link_uri', type: Types::STRING, length: 255, nullable: true)]
     private ?string $digitalLinkUri = null;
 
-    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    #[ORM\Column(name: 'origin_materials', type: Types::TEXT, nullable: true)]
     private ?string $originMaterials = null;
 
-    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    #[ORM\Column(name: 'recyclability', type: Types::TEXT, nullable: true)]
     private ?string $recyclability = null;
 
-    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    #[ORM\Column(name: 'repairability', type: Types::TEXT, nullable: true)]
     private ?string $repairability = null;
 
-    #[ORM\Column(type: Types::INTEGER)]
+    #[ORM\Column(name: 'version', type: Types::INTEGER)]
     private int $version = 1;
 
-    #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
+    #[ORM\Column(name: 'created_at', type: Types::DATETIME_IMMUTABLE)]
     private \DateTimeImmutable $createdAt;
 
-    #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
+    #[ORM\Column(name: 'updated_at', type: Types::DATETIME_IMMUTABLE)]
     private \DateTimeImmutable $updatedAt;
 
     public function __construct()
@@ -139,5 +139,38 @@ class DigitalProductPassport
     public function setUpdatedAt(\DateTimeImmutable $updatedAt): void
     {
         $this->updatedAt = $updatedAt;
+    }
+
+    /**
+     * Export passport to JSON with versioned schema.
+     *
+     * Schema version 1 format:
+     * {
+     *   "schemaVersion": 1,
+     *   "productIdentifier": "string|null",
+     *   "digitalLinkUri": "string|null",
+     *   "originMaterials": "string|null",
+     *   "recyclability": "string|null",
+     *   "repairability": "string|null",
+     *   "version": integer,
+     *   "createdAt": "ISO 8601",
+     *   "updatedAt": "ISO 8601"
+     * }
+     */
+    public function toJson(): string
+    {
+        $data = [
+            'schemaVersion' => 1,
+            'productIdentifier' => $this->productIdentifier,
+            'digitalLinkUri' => $this->digitalLinkUri,
+            'originMaterials' => $this->originMaterials,
+            'recyclability' => $this->recyclability,
+            'repairability' => $this->repairability,
+            'version' => $this->version,
+            'createdAt' => $this->createdAt->format(\DateTimeInterface::ATOM),
+            'updatedAt' => $this->updatedAt->format(\DateTimeInterface::ATOM),
+        ];
+
+        return json_encode($data, \JSON_THROW_ON_ERROR | \JSON_UNESCAPED_UNICODE);
     }
 }
