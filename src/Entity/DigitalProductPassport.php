@@ -140,4 +140,37 @@ class DigitalProductPassport
     {
         $this->updatedAt = $updatedAt;
     }
+
+    /**
+     * Export passport to JSON with versioned schema.
+     *
+     * Schema version 1 format:
+     * {
+     *   "schemaVersion": 1,
+     *   "productIdentifier": "string|null",
+     *   "digitalLinkUri": "string|null",
+     *   "originMaterials": "string|null",
+     *   "recyclability": "string|null",
+     *   "repairability": "string|null",
+     *   "version": integer,
+     *   "createdAt": "ISO 8601",
+     *   "updatedAt": "ISO 8601"
+     * }
+     */
+    public function toJson(): string
+    {
+        $data = [
+            'schemaVersion' => 1,
+            'productIdentifier' => $this->productIdentifier,
+            'digitalLinkUri' => $this->digitalLinkUri,
+            'originMaterials' => $this->originMaterials,
+            'recyclability' => $this->recyclability,
+            'repairability' => $this->repairability,
+            'version' => $this->version,
+            'createdAt' => $this->createdAt->format(\DateTimeInterface::ATOM),
+            'updatedAt' => $this->updatedAt->format(\DateTimeInterface::ATOM),
+        ];
+
+        return json_encode($data, \JSON_THROW_ON_ERROR | \JSON_UNESCAPED_UNICODE);
+    }
 }
