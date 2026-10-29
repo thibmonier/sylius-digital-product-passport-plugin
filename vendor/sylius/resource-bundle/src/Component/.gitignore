@@ -1,9 +1,0 @@
-/vendor/
-!/vendor/.gitignore
-
-/bin/
-
-/composer.phar
-/composer.lock
-
-/.phpunit.result.cache

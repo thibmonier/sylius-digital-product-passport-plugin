@@ -1,4 +1,0 @@
-sylius:
-    resource:
-        payment:
-            cannot_be_completed: 'لا يمكن إتمام الدفع بسبب عدم توفر مخزون كافٍ من المنتج "%productVariantCode%".'

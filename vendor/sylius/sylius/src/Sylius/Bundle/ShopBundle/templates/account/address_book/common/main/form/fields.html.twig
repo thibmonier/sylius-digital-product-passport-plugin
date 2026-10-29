@@ -1,5 +1,0 @@
-{% set prefixes = hookable_metadata.prefixes|merge(['sylius_shop.shared.form']) %}
-
-<div class="mb-4">
-    {% hook 'address' with { _prefixes: prefixes } %}
-</div>

@@ -1,8 +1,0 @@
-framework:
-    router:
-        strict_requirements: ~
-
-when@dev:
-    framework:
-        router:
-            strict_requirements: true

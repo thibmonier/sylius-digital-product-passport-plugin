@@ -1,4 +1,0 @@
-sylius:
-    resource:
-        payment:
-            cannot_be_completed: 'The payment cannot be completed due to insufficient stock of the "%productVariantCode%" product.'

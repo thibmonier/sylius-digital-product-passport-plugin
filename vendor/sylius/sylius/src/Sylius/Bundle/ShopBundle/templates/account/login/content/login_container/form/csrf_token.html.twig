@@ -1,3 +1,0 @@
-{% if sylius_csrf_protection_enabled() %}
-    <input type="hidden" name="_csrf_shop_security_token" value="{{ csrf_token('shop_authenticate') }}">
-{% endif %}

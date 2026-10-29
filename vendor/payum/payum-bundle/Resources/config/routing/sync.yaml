@@ -1,4 +1,0 @@
-payum_sync_do:
-    path: /payment/sync/{payum_token}
-    defaults:
-        _controller: Payum\Bundle\PayumBundle\Controller\SyncController::doAction

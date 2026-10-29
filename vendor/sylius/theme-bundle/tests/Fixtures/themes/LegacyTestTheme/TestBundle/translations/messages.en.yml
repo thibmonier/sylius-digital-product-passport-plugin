@@ -1,3 +1,0 @@
-test:
-#    legacy_theme: 'THEME/TestBundle/translations'
-    legacy_theme_bundle: 'THEME/TestBundle/translations'

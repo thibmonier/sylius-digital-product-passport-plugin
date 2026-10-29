@@ -1,3 +1,0 @@
-<div {{ sylius_test_html_attribute('product', '%s'|format(product.code)) }} >
-    {% hook 'card' with {_prefixes: hookable_metadata.prefixes|default([])|merge(['sylius_shop.shared.product'])} %}
-</div>

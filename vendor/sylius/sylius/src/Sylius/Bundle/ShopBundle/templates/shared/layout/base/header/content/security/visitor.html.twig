@@ -1,5 +1,0 @@
-{% if not is_granted('ROLE_USER') %}
-    <div class="d-flex align-items-center">
-        {% hook 'visitor' %}
-    </div>
-{% endif %}
