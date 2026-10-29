@@ -36,6 +36,15 @@ final class Driver extends AbstractDriverMiddleware
     {
         $connection = parent::connect($params);
 
+        if ('void' !== (string) (new \ReflectionMethod(ConnectionInterface::class, 'commit'))->getReturnType()) {
+            return new DBAL3\Connection(
+                $connection,
+                $this->debugDataHolder,
+                $this->stopwatch,
+                $this->connectionName
+            );
+        }
+
         return new Connection(
             $connection,
             $this->debugDataHolder,

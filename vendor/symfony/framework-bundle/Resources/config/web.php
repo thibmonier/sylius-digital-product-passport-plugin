@@ -22,7 +22,6 @@ use Symfony\Component\HttpKernel\Controller\ArgumentResolver\DateTimeValueResolv
 use Symfony\Component\HttpKernel\Controller\ArgumentResolver\DefaultValueResolver;
 use Symfony\Component\HttpKernel\Controller\ArgumentResolver\QueryParameterValueResolver;
 use Symfony\Component\HttpKernel\Controller\ArgumentResolver\RequestAttributeValueResolver;
-use Symfony\Component\HttpKernel\Controller\ArgumentResolver\RequestHeaderValueResolver;
 use Symfony\Component\HttpKernel\Controller\ArgumentResolver\RequestPayloadValueResolver;
 use Symfony\Component\HttpKernel\Controller\ArgumentResolver\RequestValueResolver;
 use Symfony\Component\HttpKernel\Controller\ArgumentResolver\ServiceValueResolver;
@@ -32,13 +31,11 @@ use Symfony\Component\HttpKernel\Controller\ArgumentResolver\VariadicValueResolv
 use Symfony\Component\HttpKernel\Controller\ErrorController;
 use Symfony\Component\HttpKernel\ControllerMetadata\ArgumentMetadataFactory;
 use Symfony\Component\HttpKernel\EventListener\CacheAttributeListener;
-use Symfony\Component\HttpKernel\EventListener\ControllerAttributesListener;
 use Symfony\Component\HttpKernel\EventListener\DisallowRobotsIndexingListener;
 use Symfony\Component\HttpKernel\EventListener\ErrorListener;
 use Symfony\Component\HttpKernel\EventListener\IsSignatureValidAttributeListener;
 use Symfony\Component\HttpKernel\EventListener\LocaleListener;
 use Symfony\Component\HttpKernel\EventListener\ResponseListener;
-use Symfony\Component\HttpKernel\EventListener\SerializeControllerResultAttributeListener;
 use Symfony\Component\HttpKernel\EventListener\ValidateRequestListener;
 
 return static function (ContainerConfigurator $container) {
@@ -78,7 +75,6 @@ return static function (ContainerConfigurator $container) {
                 service('validator')->nullOnInvalid(),
                 service('translator')->nullOnInvalid(),
                 param('validator.translation_domain'),
-                service('controller.expression_language')->nullOnInvalid(),
             ])
             ->tag('controller.targeted_value_resolver', ['name' => RequestPayloadValueResolver::class])
             ->tag('kernel.event_subscriber')
@@ -110,9 +106,6 @@ return static function (ContainerConfigurator $container) {
 
         ->set('argument_resolver.query_parameter_value_resolver', QueryParameterValueResolver::class)
             ->tag('controller.targeted_value_resolver', ['name' => QueryParameterValueResolver::class])
-
-        ->set('argument_resolver.header_value_resolver', RequestHeaderValueResolver::class)
-            ->tag('controller.targeted_value_resolver', ['name' => RequestHeaderValueResolver::class])
 
         ->set('response_listener', ResponseListener::class)
             ->args([
@@ -156,13 +149,6 @@ return static function (ContainerConfigurator $container) {
             ->tag('kernel.event_subscriber')
             ->tag('monolog.logger', ['channel' => 'request'])
 
-        ->set('kernel.controller_attributes_listener', ControllerAttributesListener::class)
-            ->args([
-                abstract_arg('attributes with listeners by event'),
-                service('controller.expression_language')->nullOnInvalid(),
-            ])
-            ->tag('kernel.event_subscriber')
-
         ->set('controller.cache_attribute_listener', CacheAttributeListener::class)
             ->args([
                 service('controller.expression_language')->nullOnInvalid(),
@@ -189,11 +175,5 @@ return static function (ContainerConfigurator $container) {
             ->parent('cache.system')
             ->private()
             ->tag('cache.pool')
-
-        ->set('serialize_controller_result_listener', SerializeControllerResultAttributeListener::class)
-        ->args([
-            service('serializer')->nullOnInvalid(),
-        ])
-        ->tag('kernel.event_subscriber')
     ;
 };

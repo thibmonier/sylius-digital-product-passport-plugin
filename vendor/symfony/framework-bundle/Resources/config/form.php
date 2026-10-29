@@ -32,8 +32,6 @@ use Symfony\Component\Form\Extension\Validator\Type\RepeatedTypeValidatorExtensi
 use Symfony\Component\Form\Extension\Validator\Type\SubmitTypeValidatorExtension;
 use Symfony\Component\Form\Extension\Validator\Type\UploadValidatorExtension;
 use Symfony\Component\Form\Extension\Validator\ValidatorTypeGuesser;
-use Symfony\Component\Form\Extension\Validator\ViolationMapper\ViolationMapper;
-use Symfony\Component\Form\Extension\Validator\ViolationMapper\ViolationMapperInterface;
 use Symfony\Component\Form\FormFactory;
 use Symfony\Component\Form\FormFactoryInterface;
 use Symfony\Component\Form\FormRegistry;
@@ -47,14 +45,6 @@ return static function (ContainerConfigurator $container) {
         ->set('form.resolved_type_factory', ResolvedFormTypeFactory::class)
 
         ->alias(ResolvedFormTypeFactoryInterface::class, 'form.resolved_type_factory')
-
-        ->set('form.violation_mapper', ViolationMapper::class)
-            ->args([
-                service('twig.form.renderer')->ignoreOnInvalid(),
-                service('translator')->ignoreOnInvalid(),
-            ])
-
-        ->alias(ViolationMapperInterface::class, 'form.violation_mapper')
 
         ->set('form.registry', FormRegistry::class)
             ->args([
@@ -151,7 +141,7 @@ return static function (ContainerConfigurator $container) {
         ->set('form.type_extension.form.validator', FormTypeValidatorExtension::class)
             ->args([
                 service('validator'),
-                service('form.violation_mapper'),
+                false,
                 service('twig.form.renderer')->ignoreOnInvalid(),
                 service('translator')->ignoreOnInvalid(),
             ])

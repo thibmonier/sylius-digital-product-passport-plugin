@@ -116,7 +116,7 @@ class SendFailedMessageForRetryListener implements EventSubscriberInterface
 
     private function shouldRetry(\Throwable $e, Envelope $envelope, RetryStrategyInterface $retryStrategy): bool
     {
-        if ($e instanceof RecoverableExceptionInterface && (!method_exists($e, 'forceRetry') || $e->forceRetry())) {
+        if ($e instanceof RecoverableExceptionInterface) {
             return true;
         }
 
@@ -125,7 +125,7 @@ class SendFailedMessageForRetryListener implements EventSubscriberInterface
         if ($e instanceof HandlerFailedException) {
             $shouldNotRetry = true;
             foreach ($e->getWrappedExceptions() as $nestedException) {
-                if ($nestedException instanceof RecoverableExceptionInterface && (!method_exists($nestedException, 'forceRetry') || $nestedException->forceRetry())) {
+                if ($nestedException instanceof RecoverableExceptionInterface) {
                     return true;
                 }
 
@@ -149,13 +149,14 @@ class SendFailedMessageForRetryListener implements EventSubscriberInterface
     private function getWaitingTime(Envelope $envelope, \Throwable $throwable, RetryStrategyInterface $retryStrategy): int
     {
         $delay = null;
-        if ($throwable instanceof RecoverableExceptionInterface) {
+        if ($throwable instanceof RecoverableExceptionInterface && method_exists($throwable, 'getRetryDelay')) {
             $delay = $throwable->getRetryDelay();
         }
 
         if ($throwable instanceof HandlerFailedException) {
             foreach ($throwable->getWrappedExceptions() as $nestedException) {
                 if (!$nestedException instanceof RecoverableExceptionInterface
+                    || !method_exists($nestedException, 'getRetryDelay')
                     || 0 > $retryDelay = $nestedException->getRetryDelay() ?? -1
                 ) {
                     continue;

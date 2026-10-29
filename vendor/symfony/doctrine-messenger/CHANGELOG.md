@@ -1,11 +1,6 @@
 CHANGELOG
 =========
 
-8.1
----
-
- * Add `PostgreSqlNotifyOnIdleListener` to properly support LISTEN/NOTIFY with multi-queue workers
-
 7.3
 ---
 

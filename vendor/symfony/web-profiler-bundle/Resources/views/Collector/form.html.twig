@@ -27,7 +27,7 @@
 
 {% block menu %}
     <span class="label label-status-{{ collector.data.nb_errors ? 'error' }} {{ collector.data.forms is empty ? 'disabled' }}">
-        <span class="icon" aria-hidden="true">{{ source('@WebProfiler/Icon/form.svg') }}</span>
+        <span class="icon">{{ source('@WebProfiler/Icon/form.svg') }}</span>
         <strong>Forms</strong>
         {% if collector.data.nb_errors > 0 %}
             <span class="count">
@@ -62,11 +62,8 @@
             text-decoration: none;
         }
 
-        .sf-profiler-form-col-property { width: 180px; }
-
-        .tree-wrapper { display: flex; gap: 0; }
-
         #tree-menu {
+            float: left;
             padding-right: 10px;
             width: 220px;
         }
@@ -87,9 +84,8 @@
         }
         #tree-details-container {
             border-left: 1px solid var(--table-border-color);
+            margin-left: 230px;
             padding-left: 20px;
-            flex: 1;
-            min-width: 0;
         }
         .tree-details {
             padding-bottom: 40px;
@@ -111,8 +107,6 @@
             position: relative;
             overflow: hidden;
             text-overflow: ellipsis;
-            display: flex;
-            align-items: center;
         }
         .tree .toggle-button {
             width: 16px;
@@ -172,8 +166,9 @@
             margin-left: 6px;
         }
         .badge-error {
+            float: right;
             background: var(--background-error);
-            color: var(--base-0, #FFF);
+            color: #FFF;
             padding: 1px 4px;
             font-size: 10px;
             font-weight: bold;
@@ -187,7 +182,7 @@
         }
         .errors th {
             background: var(--background-error);
-            color: var(--base-0, #FFF);
+            color: #FFF;
         }
         .errors .toggle-icon {
             background-color: var(--background-error);
@@ -223,7 +218,7 @@
             #initTrees() {
                 const treeItems = document.querySelectorAll('.tree .tree-inner');
                 treeItems.forEach((treeItem) => {
-                    const targetId = treeItem.getAttribute('data-tab-target-id');
+                    var targetId = treeItem.getAttribute('data-tab-target-id');
                     const target = document.getElementById(targetId);
 
                     if (!target) {
@@ -384,20 +379,18 @@
     <h2>Forms</h2>
 
     {% if collector.data.forms|length %}
-        <div class="tree-wrapper">
-            <div id="tree-menu" class="tree">
-                <ul>
-                {% for formName, formData in collector.data.forms %}
-                    {{ _self.form_tree_entry(formName, formData, true) }}
-                {% endfor %}
-                </ul>
-            </div>
+        <div id="tree-menu" class="tree">
+            <ul>
+            {% for formName, formData in collector.data.forms %}
+                {{ _self.form_tree_entry(formName, formData, true) }}
+            {% endfor %}
+            </ul>
+        </div>
 
-            <div id="tree-details-container">
-                {% for formName, formData in collector.data.forms %}
-                    {{ _self.form_tree_details(formName, formData, collector.data.forms_by_hash, loop.first) }}
-                {% endfor %}
-            </div>
+        <div id="tree-details-container">
+            {% for formName, formData in collector.data.forms %}
+                {{ _self.form_tree_details(formName, formData, collector.data.forms_by_hash, loop.first) }}
+            {% endfor %}
         </div>
     {% else %}
         <div class="empty empty-panel">
@@ -555,7 +548,7 @@
         <table>
             <thead>
             <tr>
-                <th class="sf-profiler-form-col-property">Property</th>
+                <th style="width: 180px">Property</th>
                 <th>Value</th>
             </tr>
             </thead>
@@ -588,7 +581,7 @@
         </table>
     {% else %}
         <div class="empty">
-            <p>No default data defined.</p>
+            <p>This form has default data defined.</p>
         </div>
     {% endif %}
 {% endmacro %}
@@ -598,7 +591,7 @@
         <table>
             <thead>
             <tr>
-                <th class="sf-profiler-form-col-property">Property</th>
+                <th style="width: 180px">Property</th>
                 <th>Value</th>
             </tr>
             </thead>
@@ -641,7 +634,7 @@
         <table>
             <thead>
             <tr>
-                <th class="sf-profiler-form-col-property">Option</th>
+                <th style="width: 180px">Option</th>
                 <th>Passed Value</th>
                 <th>Resolved Value</th>
             </tr>
@@ -678,7 +671,7 @@
     <table>
         <thead>
         <tr>
-            <th class="sf-profiler-form-col-property">Option</th>
+            <th style="width: 180px">Option</th>
             <th>Value</th>
         </tr>
         </thead>
@@ -697,7 +690,7 @@
     <table>
         <thead>
         <tr>
-            <th class="sf-profiler-form-col-property">Variable</th>
+            <th style="width: 180px">Variable</th>
             <th>Value</th>
         </tr>
         </thead>

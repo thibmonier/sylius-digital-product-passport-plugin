@@ -28,8 +28,6 @@ interface CompositeTypeInterface
     public function getTypes(): array;
 
     /**
-     * @param-immediately-invoked-callable $specification
-     *
      * @param callable(Type): bool $specification
      */
     public function composedTypesAreSatisfiedBy(callable $specification): bool;

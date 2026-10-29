@@ -230,16 +230,6 @@ class HttpOptions
     /**
      * @return $this
      */
-    public function setMaxConnectDuration(float $maxConnectDuration): static
-    {
-        $this->options['max_connect_duration'] = $maxConnectDuration;
-
-        return $this;
-    }
-
-    /**
-     * @return $this
-     */
     public function bindTo(string $bindto): static
     {
         $this->options['bindto'] = $bindto;

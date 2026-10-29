@@ -25,8 +25,6 @@ interface InstantiatorInterface
     /**
      * Instantiates a proxy object.
      *
-     * @param-immediately-invoked-callable $realInstantiator
-     *
      * @param string                                        $id               Identifier of the requested service
      * @param (callable(): object)|(callable(object): void) $realInstantiator A callback that creates or initializes the real service instance:
      *                                                                        - For direct instantiation or value-holder proxies: Called without arguments and returns the service object.

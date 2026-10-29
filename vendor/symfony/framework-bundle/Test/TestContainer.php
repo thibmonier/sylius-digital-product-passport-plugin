@@ -33,7 +33,6 @@ class TestContainer extends Container
         private KernelInterface $kernel,
         private string $privateServicesLocatorId,
         private array $renamedIds = [],
-        private array $nonSharedServices = [],
         private array $privateServiceIds = [],
     ) {
     }
@@ -72,15 +71,6 @@ class TestContainer extends Container
     {
         $container = $this->getPublicContainer();
         $renamedId = $this->renamedIds[$id] ?? $id;
-
-        if (isset($this->nonSharedServices[$renamedId])) {
-            if (!$service instanceof \Closure) {
-                throw new InvalidArgumentException(\sprintf('The "%s" service is non-shared and must be replaced by a closure that should act as a factory.', $id));
-            }
-            $container->factories[$renamedId] = $container->factories['service_container'][$renamedId] = $service;
-
-            return;
-        }
 
         if (!$this->getPrivateContainer()->has($renamedId)) {
             $container->set($renamedId, $service);

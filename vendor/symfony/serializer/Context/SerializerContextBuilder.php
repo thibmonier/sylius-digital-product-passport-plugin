@@ -36,9 +36,4 @@ final class SerializerContextBuilder implements ContextBuilderInterface
     {
         return $this->with(DenormalizerInterface::COLLECT_DENORMALIZATION_ERRORS, $collectDenormalizationErrors);
     }
-
-    public function withCollectExtraAttributesErrors(?bool $collectExtraAttributesErrors): static
-    {
-        return $this->with(DenormalizerInterface::COLLECT_EXTRA_ATTRIBUTES_ERRORS, $collectExtraAttributesErrors);
-    }
 }

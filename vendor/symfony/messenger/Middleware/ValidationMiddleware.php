@@ -29,7 +29,11 @@ class ValidationMiddleware implements MiddlewareInterface
     public function handle(Envelope $envelope, StackInterface $stack): Envelope
     {
         $message = $envelope->getMessage();
-        $groups = $envelope->last(ValidationStamp::class)?->getGroups();
+        $groups = null;
+        /** @var ValidationStamp|null $validationStamp */
+        if ($validationStamp = $envelope->last(ValidationStamp::class)) {
+            $groups = $validationStamp->getGroups();
+        }
 
         $violations = $this->validator->validate($message, null, $groups);
         if (\count($violations)) {

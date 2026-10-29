@@ -93,7 +93,13 @@ class DebugCommand extends Command
             throw new InvalidArgumentException(\sprintf('Argument "name" not supported, it requires the Twig loader "%s".', FilesystemLoader::class));
         }
 
-        match ($input->getOption('format')) {
+        $format = $input->getOption('format');
+        if ('text' === $format) {
+            trigger_deprecation('symfony/twig-bridge', '7.2', 'The "text" format is deprecated, use "txt" instead.');
+
+            $format = 'txt';
+        }
+        match ($format) {
             'txt' => $name ? $this->displayPathsText($io, $name) : $this->displayGeneralText($io, $filter),
             'json' => $name ? $this->displayPathsJson($io, $name) : $this->displayGeneralJson($io, $filter),
             default => throw new InvalidArgumentException(\sprintf('Supported formats are "%s".', implode('", "', $this->getAvailableFormatOptions()))),

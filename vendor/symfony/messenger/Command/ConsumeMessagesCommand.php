@@ -66,7 +66,7 @@ class ConsumeMessagesCommand extends Command implements SignalableCommandInterfa
 
         $this
             ->setDefinition([
-                new InputArgument('receivers', InputArgument::IS_ARRAY, 'Names or regular expression patterns of the receivers/transports to consume in order of priority', $defaultReceiverName ? [$defaultReceiverName] : []),
+                new InputArgument('receivers', InputArgument::IS_ARRAY, 'Names of the receivers/transports to consume in order of priority', $defaultReceiverName ? [$defaultReceiverName] : []),
                 new InputOption('limit', 'l', InputOption::VALUE_REQUIRED, 'Limit the number of received messages'),
                 new InputOption('failure-limit', 'f', InputOption::VALUE_REQUIRED, 'The number of failed messages the worker can consume'),
                 new InputOption('memory-limit', 'm', InputOption::VALUE_REQUIRED, 'The memory limit the worker can consume'),
@@ -74,26 +74,19 @@ class ConsumeMessagesCommand extends Command implements SignalableCommandInterfa
                 new InputOption('sleep', null, InputOption::VALUE_REQUIRED, 'Seconds to sleep before asking for new messages after no messages were found', 1),
                 new InputOption('bus', 'b', InputOption::VALUE_REQUIRED, 'Name of the bus to which received messages should be dispatched (if not passed, bus is determined automatically)'),
                 new InputOption('queues', null, InputOption::VALUE_REQUIRED | InputOption::VALUE_IS_ARRAY, 'Limit receivers to only consume from the specified queues'),
-                new InputOption('no-reset', null, InputOption::VALUE_OPTIONAL, 'Do not reset container services after each message, or pass a number to reset every N messages', false),
+                new InputOption('no-reset', null, InputOption::VALUE_NONE, 'Do not reset container services after each message'),
                 new InputOption('all', null, InputOption::VALUE_NONE, 'Consume messages from all receivers'),
                 new InputOption('exclude-receivers', null, InputOption::VALUE_REQUIRED | InputOption::VALUE_IS_ARRAY, 'Exclude specific receivers/transports from consumption (can only be used with --all)'),
                 new InputOption('keepalive', null, InputOption::VALUE_OPTIONAL, 'Whether to use the transport\'s keepalive mechanism if implemented', self::DEFAULT_KEEPALIVE_INTERVAL),
-                new InputOption('fetch-size', null, InputOption::VALUE_REQUIRED, 'The number of messages to fetch per call to the transport', 1),
             ])
             ->setHelp(<<<'EOF'
                 The <info>%command.name%</info> command consumes messages and dispatches them to the message bus.
 
                     <info>php %command.full_name% <receiver-name></info>
 
-                You can specify a single receiver name or use a regular expression to match
-                multiple receivers. When a regular expression matches multiple transport names,
-                the order of the receivers will match their order in the configuration:
+                To receive from multiple transports, pass each name:
 
-                    <info>php %command.full_name% "receiver1|receiver2"</info>
-
-                To get a different order, pass each name or regular expression as a separate argument:
-
-                    <info>php %command.full_name% receiver2 receiver1</info>
+                    <info>php %command.full_name% receiver1 receiver2</info>
 
                 Use the <info>--limit</info> option to limit the number of messages received:
 
@@ -134,9 +127,6 @@ class ConsumeMessagesCommand extends Command implements SignalableCommandInterfa
 
                     <info>php %command.full_name% --all --exclude-receivers=<receiver-name></info>
 
-                Use the <info>--fetch-size</info> option to control how many messages are fetched per call to the transport:
-
-                    <info>php %command.full_name% <receiver-name> --fetch-size=8</info>
                 EOF
             )
         ;
@@ -190,16 +180,7 @@ class ConsumeMessagesCommand extends Command implements SignalableCommandInterfa
 
         $receivers = [];
         $rateLimiters = [];
-        if ($input->getOption('all')) {
-            $receiverNames = $this->receiverNames;
-        } else {
-            $receiverNames = [];
-            foreach ($input->getArgument('receivers') as $receiver) {
-                $receiverNames = array_merge($receiverNames, preg_grep(\sprintf('{^%s$}', $receiver), $this->receiverNames));
-            }
-            $receiverNames = $receiverNames ?: $input->getArgument('receivers');
-            $receiverNames = array_unique($receiverNames);
-        }
+        $receiverNames = $input->getOption('all') ? $this->receiverNames : $input->getArgument('receivers');
 
         if (!$receiverNames) {
             throw new RuntimeException('Please pass at least one receiver.');
@@ -237,19 +218,8 @@ class ConsumeMessagesCommand extends Command implements SignalableCommandInterfa
             }
         }
 
-        $resetInterval = match ($resetInterval = $input->getOption('no-reset')) {
-            false => 1,
-            null => 0,
-            default => filter_var($resetInterval, \FILTER_VALIDATE_INT, \FILTER_NULL_ON_FAILURE),
-        };
-
-        if (0 > ($resetInterval ?? -1)) {
-            throw new InvalidOptionException(\sprintf('Option "no-reset" must be a positive integer, "%s" passed.', $input->getOption('no-reset')));
-        }
-
         $subscribers = [];
-        $this->resetServicesListener?->setInterval($resetInterval > 0 ? $resetInterval : 1);
-        if ($this->resetServicesListener && $resetInterval > 0) {
+        if (null !== $this->resetServicesListener && !$input->getOption('no-reset')) {
             $subscribers[] = $this->resetServicesListener;
         }
 
@@ -309,12 +279,6 @@ class ConsumeMessagesCommand extends Command implements SignalableCommandInterfa
         if ($queues = $input->getOption('queues')) {
             $options['queues'] = $queues;
         }
-
-        if (false === $fetchSize = filter_var($input->getOption('fetch-size'), \FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]])) {
-            throw new \InvalidArgumentException(\sprintf('The "--fetch-size" option must be a positive integer, "%s" given.', $input->getOption('fetch-size')));
-        }
-
-        $options['fetch_size'] = $fetchSize;
 
         foreach ($subscribers as $subscriber) {
             $this->eventDispatcher->addSubscriber($subscriber);

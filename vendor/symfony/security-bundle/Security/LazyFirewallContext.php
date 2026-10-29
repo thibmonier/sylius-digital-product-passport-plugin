@@ -15,6 +15,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorage;
 use Symfony\Component\Security\Http\Event\LazyResponseEvent;
+use Symfony\Component\Security\Http\Firewall\AbstractListener;
 use Symfony\Component\Security\Http\Firewall\ExceptionListener;
 use Symfony\Component\Security\Http\Firewall\FirewallListenerInterface;
 use Symfony\Component\Security\Http\Firewall\LogoutListener;
@@ -53,15 +54,20 @@ class LazyFirewallContext extends FirewallContext implements FirewallListenerInt
         $lazy = true;
 
         foreach (parent::getListeners() as $listener) {
-            if (false !== $supports = $listener->supports($request)) {
+            if (!$listener instanceof FirewallListenerInterface) {
+                trigger_deprecation('symfony/security-http', '7.4', 'Using a callable as firewall listener is deprecated, extend "%s" or implement "%s" instead.', AbstractListener::class, FirewallListenerInterface::class);
+
                 $listeners[] = $listener;
+                $lazy = false;
+            } elseif (false !== $supports = $listener->supports($request)) {
+                $listeners[] = [$listener, 'authenticate'];
                 $lazy = $lazy && null === $supports;
             }
         }
 
         if (!$lazy) {
             foreach ($listeners as $listener) {
-                $listener->authenticate($event);
+                $listener($event);
 
                 if ($event->hasResponse()) {
                     return;
@@ -74,7 +80,7 @@ class LazyFirewallContext extends FirewallContext implements FirewallListenerInt
         $this->tokenStorage->setInitializer(static function () use ($event, $listeners) {
             $event = new LazyResponseEvent($event);
             foreach ($listeners as $listener) {
-                $listener->authenticate($event);
+                $listener($event);
             }
         });
     }
@@ -82,5 +88,15 @@ class LazyFirewallContext extends FirewallContext implements FirewallListenerInt
     public static function getPriority(): int
     {
         return 0;
+    }
+
+    /**
+     * @deprecated since Symfony 7.4, to be removed in 8.0
+     */
+    public function __invoke(RequestEvent $event): void
+    {
+        trigger_deprecation('symfony/security-bundle', '7.4', 'The "%s()" method is deprecated since Symfony 7.4 and will be removed in 8.0.', __METHOD__);
+
+        $this->authenticate($event);
     }
 }

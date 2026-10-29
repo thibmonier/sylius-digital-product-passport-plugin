@@ -16,7 +16,6 @@ use Symfony\Component\Console\Exception\RuntimeException;
 use Symfony\Component\DependencyInjection\Alias;
 use Symfony\Component\DependencyInjection\Argument\AbstractArgument;
 use Symfony\Component\DependencyInjection\Argument\ArgumentInterface;
-use Symfony\Component\DependencyInjection\Argument\EnvClosureArgument;
 use Symfony\Component\DependencyInjection\Argument\ServiceClosureArgument;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
@@ -80,8 +79,7 @@ class JsonDescriptor extends Descriptor
         if ($service instanceof Alias) {
             $this->describeContainerAlias($service, $options, $container);
         } elseif ($service instanceof Definition) {
-            $data = $this->getContainerDefinitionData($service, isset($options['omit_tags']) && $options['omit_tags'], $container, $options['id']);
-            $this->writeData($data, $options);
+            $this->writeData($this->getContainerDefinitionData($service, isset($options['omit_tags']) && $options['omit_tags'], $container, $options['id']), $options);
         } else {
             $this->writeData($service::class, $options);
         }
@@ -308,13 +306,6 @@ class JsonDescriptor extends Descriptor
 
         $data['usages'] = null !== $container && null !== $id ? $this->getServiceEdges($container, $id) : [];
 
-        if ($container && $id) {
-            $decorationStack = $this->getDecorationStack($container, $id);
-            if (\count($decorationStack) > 1) {
-                $data['decoration_stack'] = $decorationStack;
-            }
-        }
-
         return $data;
     }
 
@@ -448,18 +439,6 @@ class JsonDescriptor extends Descriptor
 
         if ($value instanceof AbstractArgument) {
             return ['type' => 'abstract', 'text' => $value->getText()];
-        }
-
-        if ($value instanceof EnvClosureArgument) {
-            $data = ['type' => 'env_closure', 'value' => $value->getValue()];
-            if (null !== $default = $value->getDefault()) {
-                $data['default'] = $default;
-            }
-            if ($value->isStringable()) {
-                $data['stringable'] = true;
-            }
-
-            return $data;
         }
 
         if ($value instanceof ArgumentInterface) {

@@ -11,7 +11,6 @@
 
 namespace Symfony\Component\DependencyInjection\Compiler;
 
-use Symfony\Component\DependencyInjection\Argument\EnvClosureArgument;
 use Symfony\Component\DependencyInjection\Definition;
 
 /**
@@ -35,10 +34,6 @@ class ResolveEnvPlaceholdersPass extends AbstractRecursivePass
     {
         if (\is_string($value)) {
             return $this->container->resolveEnvPlaceholders($value, $this->format);
-        }
-        if ($value instanceof EnvClosureArgument) {
-            // the closure reads the env var at runtime, so only its expression is formatted
-            return true === $this->format ? $value : new EnvClosureArgument($this->container->resolveEnvPlaceholders($value->getValue(), $this->format), $value->getDefault(), $value->isStringable());
         }
         if ($value instanceof Definition) {
             $changes = $value->getChanges();

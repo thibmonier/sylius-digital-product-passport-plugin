@@ -14,9 +14,8 @@ namespace Symfony\Component\Security\Http\EventListener;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\ExpressionLanguage\Expression;
 use Symfony\Component\ExpressionLanguage\ExpressionLanguage;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Event\ControllerArgumentsEvent;
-use Symfony\Component\HttpKernel\Event\ControllerAttributeEvent;
-use Symfony\Component\HttpKernel\EventListener\ControllerAttributesListener;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\Security\Core\Authorization\AccessDecision;
@@ -38,20 +37,6 @@ class IsGrantedAttributeListener implements EventSubscriberInterface
     ) {
     }
 
-    public function onKernelControllerAttribute(ControllerAttributeEvent $event): void
-    {
-        $kernelEvent = $event->kernelEvent;
-
-        if (!$kernelEvent instanceof ControllerArgumentsEvent) {
-            return;
-        }
-
-        $this->processAttribute($event->attribute, $kernelEvent);
-    }
-
-    /**
-     * @internal since Symfony 8.1, use onKernelControllerAttribute() instead
-     */
     public function onKernelControllerArguments(ControllerArgumentsEvent $event): void
     {
         $attributes = [];
@@ -65,66 +50,63 @@ class IsGrantedAttributeListener implements EventSubscriberInterface
             return;
         }
 
-        foreach ($attributes as $attribute) {
-            $this->processAttribute($attribute, $event);
-        }
-    }
-
-    private function processAttribute(IsGranted $attribute, ControllerArgumentsEvent $event): void
-    {
         $request = $event->getRequest();
+        $arguments = $event->getNamedArguments();
 
-        if ($attribute->methods && !\in_array($request->getMethod(), array_map('strtoupper', $attribute->methods), true)) {
-            return;
-        }
+        foreach ($attributes as $attribute) {
+            if ($attribute->methods && !\in_array($request->getMethod(), $attribute->methods, true)) {
+                continue;
+            }
 
-        $subject = null;
+            $subject = null;
 
-        if ($subjectRef = $attribute->subject) {
-            if (\is_array($subjectRef)) {
-                foreach ($subjectRef as $refKey => $ref) {
-                    $subject[\is_string($refKey) ? $refKey : (string) $ref] = $this->getIsGrantedSubject($ref, $event);
+            if ($subjectRef = $attribute->subject) {
+                if (\is_array($subjectRef)) {
+                    foreach ($subjectRef as $refKey => $ref) {
+                        $subject[\is_string($refKey) ? $refKey : (string) $ref] = $this->getIsGrantedSubject($ref, $request, $arguments);
+                    }
+                } else {
+                    $subject = $this->getIsGrantedSubject($subjectRef, $request, $arguments);
                 }
-            } else {
-                $subject = $this->getIsGrantedSubject($subjectRef, $event);
             }
-        }
-        $accessDecision = new AccessDecision();
+            $accessDecision = new AccessDecision();
 
-        if (!$accessDecision->isGranted = $this->authChecker->isGranted($attribute->attribute, $subject, $accessDecision)) {
-            $message = $attribute->message ?: $accessDecision->getMessage();
+            if (!$accessDecision->isGranted = $this->authChecker->isGranted($attribute->attribute, $subject, $accessDecision)) {
+                $message = $attribute->message ?: $accessDecision->getMessage();
 
-            if ($statusCode = $attribute->statusCode) {
-                throw new HttpException($statusCode, $message, code: $attribute->exceptionCode ?? 0);
+                if ($statusCode = $attribute->statusCode) {
+                    throw new HttpException($statusCode, $message, code: $attribute->exceptionCode ?? 0);
+                }
+
+                $e = new AccessDeniedException($message, code: $attribute->exceptionCode ?? 403);
+                $e->setAttributes([$attribute->attribute]);
+                $e->setSubject($subject);
+                $e->setAccessDecision($accessDecision);
+
+                throw $e;
             }
-
-            $e = new AccessDeniedException($message, code: $attribute->exceptionCode ?? 403);
-            $e->setAttributes([$attribute->attribute]);
-            $e->setSubject($subject);
-            $e->setAccessDecision($accessDecision);
-
-            throw $e;
         }
     }
 
     public static function getSubscribedEvents(): array
     {
-        if (!class_exists(ControllerAttributesListener::class, false)) {
-            return [KernelEvents::CONTROLLER_ARGUMENTS => ['onKernelControllerArguments', 20]];
-        }
-
-        return [
-            KernelEvents::CONTROLLER_ARGUMENTS.'.'.IsGranted::class => 'onKernelControllerAttribute',
-        ];
+        return [KernelEvents::CONTROLLER_ARGUMENTS => ['onKernelControllerArguments', 20]];
     }
 
-    private function getIsGrantedSubject(string|Expression|\Closure $subjectRef, ControllerArgumentsEvent $event): mixed
+    private function getIsGrantedSubject(string|Expression|\Closure $subjectRef, Request $request, array $arguments): mixed
     {
-        if ($subjectRef instanceof \Closure || $subjectRef instanceof Expression) {
-            return $event->evaluate($subjectRef, $this->expressionLanguage);
+        if ($subjectRef instanceof \Closure) {
+            return $subjectRef($arguments, $request);
         }
 
-        $arguments = $event->getNamedArguments();
+        if ($subjectRef instanceof Expression) {
+            $this->expressionLanguage ??= new ExpressionLanguage();
+
+            return $this->expressionLanguage->evaluate($subjectRef, [
+                'request' => $request,
+                'args' => $arguments,
+            ]);
+        }
 
         if (!\array_key_exists($subjectRef, $arguments)) {
             throw new RuntimeException(\sprintf('Could not find the subject "%s" for the #[IsGranted] attribute. Try adding a "$%s" argument to your controller method.', $subjectRef, $subjectRef));

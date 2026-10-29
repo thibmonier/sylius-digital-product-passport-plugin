@@ -12,7 +12,6 @@
 namespace Symfony\Component\Form\Flow\DataStorage;
 
 use Symfony\Component\HttpFoundation\RequestStack;
-use Symfony\Component\VarExporter\DeepCloner;
 
 /**
  * @author Yonel Ceruto <open@yceruto.dev>
@@ -27,8 +26,7 @@ class SessionDataStorage implements DataStorageInterface
 
     public function save(object|array $data): void
     {
-        $data = new DeepCloner($data);
-        $this->requestStack->getSession()->set($this->key, $data->isStaticValue() ? $data->clone() : $data);
+        $this->requestStack->getSession()->set($this->key, unserialize(serialize($data), ['allowed_classes' => true]));
     }
 
     public function load(object|array|null $default = null): object|array|null
@@ -37,7 +35,8 @@ class SessionDataStorage implements DataStorageInterface
             return $default;
         }
 
-        return $data instanceof DeepCloner ? $data->clone() : DeepCloner::deepClone($data);
+        // Deep clone to decouple the returned data from the session's internal storage
+        return unserialize(serialize($data), ['allowed_classes' => true]);
     }
 
     public function clear(): void

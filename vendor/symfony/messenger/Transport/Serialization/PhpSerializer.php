@@ -12,9 +12,7 @@
 namespace Symfony\Component\Messenger\Transport\Serialization;
 
 use Symfony\Component\Messenger\Envelope;
-use Symfony\Component\Messenger\Exception\InvalidArgumentException;
 use Symfony\Component\Messenger\Exception\MessageDecodingFailedException;
-use Symfony\Component\Messenger\Stamp\BusNameStamp;
 use Symfony\Component\Messenger\Stamp\HandledStamp;
 use Symfony\Component\Messenger\Stamp\MessageDecodingFailedStamp;
 use Symfony\Component\Messenger\Stamp\NonSendableStampInterface;
@@ -45,7 +43,7 @@ class PhpSerializer implements SerializerInterface, MessageTypeAwareSerializerIn
     public function decode(array $encodedEnvelope): Envelope
     {
         if (empty($encodedEnvelope['body'])) {
-            return MessageDecodingFailedException::wrap($encodedEnvelope, 'Encoded envelope should have at least a "body", or maybe you should implement your own serializer.');
+            throw new MessageDecodingFailedException('Encoded envelope should have at least a "body", or maybe you should implement your own serializer.');
         }
 
         // Decoded strictly, as getMessageType() does, so that both read the same bytes: a lax
@@ -53,34 +51,15 @@ class PhpSerializer implements SerializerInterface, MessageTypeAwareSerializerIn
         // signature is checked against to be read from a different payload than the one decoded.
         if (!str_ends_with($encodedEnvelope['body'], '}')) {
             if (false === $body = base64_decode($encodedEnvelope['body'], true)) {
-                return MessageDecodingFailedException::wrap($encodedEnvelope, 'Could not decode the envelope body: it is neither a serialized payload nor valid base64.');
+                throw new MessageDecodingFailedException('Could not decode the envelope body: it is neither a serialized payload nor valid base64.');
             }
 
             $encodedEnvelope['body'] = $body;
         }
 
-        if ('' === $serializeEnvelope = stripslashes($encodedEnvelope['body'])) {
-            return MessageDecodingFailedException::wrap($encodedEnvelope, 'Encoded envelope should have at least a "body", or maybe you should implement your own serializer.');
-        }
+        $serializeEnvelope = stripslashes($encodedEnvelope['body']);
 
-        try {
-            $envelope = $this->safelyUnserialize($serializeEnvelope);
-
-            if (!$envelope instanceof Envelope) {
-                return MessageDecodingFailedException::wrap($encodedEnvelope, 'Could not decode message into an Envelope.');
-            }
-
-            // encoding strips these stamps, so they never come from a transport
-            $envelope = $envelope->withoutStampsOfType(NonSendableStampInterface::class);
-
-            if ($envelope->getMessage() instanceof \__PHP_Incomplete_Class) {
-                $envelope = $envelope->with(new MessageDecodingFailedStamp());
-            }
-        } catch (\Throwable $e) {
-            return MessageDecodingFailedException::wrap($encodedEnvelope, 'Could not decode Envelope: '.$e->getMessage(), $e->getCode(), $e)->with(...self::decodeBusNameStamps($serializeEnvelope));
-        }
-
-        return $envelope;
+        return $this->safelyUnserialize($serializeEnvelope);
     }
 
     public function getMessageType(array $encodedEnvelope): ?string
@@ -103,10 +82,6 @@ class PhpSerializer implements SerializerInterface, MessageTypeAwareSerializerIn
         // enum case whatever the list. So once Envelope is loaded, autoloading is refused
         // while unserialize() runs, and the enum cases are replaced below when it was needed.
         // The capital-S string format, which serialize() never writes, can spell any property name with escapes: the tokenizer below refuses it.
-        // The "allowed_classes" allowlist is the SOLE line of defense here: this call
-        // intentionally runs without installing the unserialize_callback_func / error
-        // handler guards used by safelyUnserialize(). Any future change that widens
-        // "allowed_classes" beyond Envelope MUST re-introduce those guards.
         if (!str_contains($body, 'C:') && !str_contains($body, 'S:') && false !== $type = self::unserializeMessageType($body)) {
             return $type;
         }
@@ -218,8 +193,12 @@ class PhpSerializer implements SerializerInterface, MessageTypeAwareSerializerIn
         ];
     }
 
-    private function safelyUnserialize(string $contents): mixed
+    private function safelyUnserialize(string $contents): Envelope
     {
+        if ('' === $contents) {
+            throw new MessageDecodingFailedException('Could not decode an empty message using PHP serialization.');
+        }
+
         if ($this->acceptPhpIncompleteClass) {
             $prevUnserializeHandler = ini_set('unserialize_callback_func', null);
         } else {
@@ -234,11 +213,31 @@ class PhpSerializer implements SerializerInterface, MessageTypeAwareSerializerIn
         });
 
         try {
-            return unserialize($contents, ['allowed_classes' => true]);
+            /** @var Envelope */
+            $envelope = unserialize($contents, ['allowed_classes' => true]);
+        } catch (\Throwable $e) {
+            if ($e instanceof MessageDecodingFailedException) {
+                throw $e;
+            }
+
+            throw new MessageDecodingFailedException('Could not decode Envelope: '.$e->getMessage(), 0, $e);
         } finally {
             restore_error_handler();
             ini_set('unserialize_callback_func', $prevUnserializeHandler);
         }
+
+        if (!$envelope instanceof Envelope) {
+            throw new MessageDecodingFailedException('Could not decode message into an Envelope.');
+        }
+
+        // encoding strips these stamps, so they never come from a transport
+        $envelope = $envelope->withoutStampsOfType(NonSendableStampInterface::class);
+
+        if ($envelope->getMessage() instanceof \__PHP_Incomplete_Class) {
+            $envelope = $envelope->with(new MessageDecodingFailedStamp());
+        }
+
+        return $envelope;
     }
 
     /**
@@ -246,7 +245,7 @@ class PhpSerializer implements SerializerInterface, MessageTypeAwareSerializerIn
      */
     public static function handleUnserializeCallback(string $class): never
     {
-        throw new InvalidArgumentException(\sprintf('Message class "%s" not found during decoding.', $class));
+        throw new MessageDecodingFailedException(\sprintf('Message class "%s" not found during decoding.', $class));
     }
 
     /**
@@ -445,24 +444,6 @@ class PhpSerializer implements SerializerInterface, MessageTypeAwareSerializerIn
                 default:
                     return false;
             }
-        }
-    }
-
-    /**
-     * Reads the bus names of an envelope that failed to decode, so that the failure is routed to the bus of its message.
-     *
-     * Only Envelope and BusNameStamp are instantiated: the message and the other stamps come back as incomplete objects, without running any of their code.
-     *
-     * @return list<BusNameStamp>
-     */
-    private static function decodeBusNameStamps(string $serializedEnvelope): array
-    {
-        try {
-            $envelope = @unserialize($serializedEnvelope, ['allowed_classes' => [Envelope::class, BusNameStamp::class]]);
-
-            return $envelope instanceof Envelope ? array_values(array_filter($envelope->all(BusNameStamp::class), static fn ($stamp) => $stamp instanceof BusNameStamp)) : [];
-        } catch (\Throwable) {
-            return [];
         }
     }
 }

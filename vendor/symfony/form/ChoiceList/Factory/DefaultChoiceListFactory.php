@@ -141,9 +141,6 @@ class DefaultChoiceListFactory implements ChoiceListFactoryInterface
         return new ChoiceListView($otherViews, $preferredViews);
     }
 
-    /**
-     * @param-immediately-invoked-callable $isPreferred
-     */
     private static function addChoiceView($choice, string $value, $label, array $keys, &$index, $attr, $labelTranslationParameters, ?callable $isPreferred, array &$preferredViews, array &$preferredViewsOrder, array &$otherViews, bool $duplicatePreferredChoices): void
     {
         // $value may be an integer or a string, since it's stored in the array
@@ -250,10 +247,6 @@ class DefaultChoiceListFactory implements ChoiceListFactoryInterface
         }
     }
 
-    /**
-     * @param-immediately-invoked-callable $groupBy
-     * @param-immediately-invoked-callable $isPreferred
-     */
     private static function addChoiceViewsGroupedByCallable(callable $groupBy, $choice, string $value, $label, array $keys, &$index, $attr, $labelTranslationParameters, ?callable $isPreferred, array &$preferredViews, array &$preferredViewsOrder, array &$otherViews, bool $duplicatePreferredChoices): void
     {
         $groupLabels = $groupBy($choice, $keys[$value], $value);

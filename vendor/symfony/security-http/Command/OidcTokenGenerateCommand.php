@@ -126,6 +126,6 @@ final class OidcTokenGenerateCommand extends Command
             throw new \InvalidArgumentException(\sprintf('The "--not-before" option must be a valid date, "%s" given.', $notBefore));
         }
 
-        return \DateTimeImmutable::createFromTimestamp($timestamp);
+        return new \DateTimeImmutable('@'.$timestamp);
     }
 }

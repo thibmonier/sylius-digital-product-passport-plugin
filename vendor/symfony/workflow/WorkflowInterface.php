@@ -20,6 +20,8 @@ use Symfony\Component\Workflow\Metadata\MetadataStoreInterface;
  * Describes a workflow instance.
  *
  * @author Amrouche Hamza <hamza.simperfit@gmail.com>
+ *
+ * @method Transition|null getEnabledTransition(object $subject, string $name)
  */
 interface WorkflowInterface
 {
@@ -55,8 +57,6 @@ interface WorkflowInterface
      * @return Transition[]
      */
     public function getEnabledTransitions(object $subject): array;
-
-    public function getEnabledTransition(object $subject, string $name): ?Transition;
 
     public function getName(): string;
 

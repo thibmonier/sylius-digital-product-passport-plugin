@@ -84,9 +84,6 @@ class UnionType extends Type implements CompositeTypeInterface
         return $this->types;
     }
 
-    /**
-     * @param-immediately-invoked-callable $specification
-     */
     public function composedTypesAreSatisfiedBy(callable $specification): bool
     {
         foreach ($this->types as $type) {

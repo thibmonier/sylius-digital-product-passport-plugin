@@ -263,7 +263,6 @@
         "tags": { "$ref": "#/$defs/tags" },
         "resource_tags": { "$ref": "#/$defs/tags" },
         "decorates": { "type": ["string", "null"] },
-        "decorates_tag": { "type": ["string", "null"] },
         "decoration_inner_name": { "type": ["string", "null"] },
         "decoration_priority": { "type": ["integer", "null"] },
         "decoration_on_invalid": { "oneOf": [ { "enum": ["exception", "ignore"] }, { "type": "null" } ], "$comment": "Use null (without quotes) for NULL_ON_INVALID_REFERENCE." },
@@ -334,12 +333,7 @@
           }
         },
         "public": { "type": ["boolean", "null"] },
-        "deprecated": { "oneOf": [ { "$ref": "#/$defs/deprecation" }, { "type": "null" } ] },
-        "decorates": { "type": ["string", "null"] },
-        "decorates_tag": { "type": ["string", "null"] },
-        "decoration_inner_name": { "type": ["string", "null"] },
-        "decoration_priority": { "type": ["integer", "null"] },
-        "decoration_on_invalid": { "oneOf": [ { "enum": ["exception", "ignore"] }, { "type": "null" } ], "$comment": "Use null (without quotes) for NULL_ON_INVALID_REFERENCE." }
+        "deprecated": { "oneOf": [ { "$ref": "#/$defs/deprecation" }, { "type": "null" } ] }
       },
       "required": ["stack"],
       "additionalProperties": false

@@ -16,7 +16,6 @@ use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Exception\InvalidArgumentException;
 use Symfony\Component\DependencyInjection\Exception\RuntimeException;
-use Symfony\Component\VarExporter\DeepCloner;
 
 /**
  * Applies instanceof conditionals to definitions.
@@ -106,7 +105,15 @@ class ResolveInstanceofConditionalsPass implements CompilerPassInterface
             $bindings = $definition->getBindings();
             $abstract = $container->setDefinition('.abstract.instanceof.'.$id, $definition);
             $definition->setBindings([]);
-            $definition = (new DeepCloner($definition))->cloneAs(ChildDefinition::class);
+            $definition = serialize($definition);
+
+            if (Definition::class === $abstract::class) {
+                // cast Definition to ChildDefinition
+                $definition = substr_replace($definition, '53', 2, 2);
+                $definition = substr_replace($definition, 'Child', 44, 0);
+            }
+            /** @var ChildDefinition $definition */
+            $definition = unserialize($definition, ['allowed_classes' => true]);
             $definition->setParent($parent);
 
             if (null !== $shared && !isset($definition->getChanges()['shared'])) {

@@ -20,7 +20,6 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\ErrorHandler\Exception\FlattenException;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\Exception\InvalidArgumentException;
-use Symfony\Component\Messenger\Exception\MessageDecodingFailedException;
 use Symfony\Component\Messenger\Stamp\ErrorDetailsStamp;
 use Symfony\Component\Messenger\Stamp\MessageDecodingFailedStamp;
 use Symfony\Component\Messenger\Stamp\RedeliveryStamp;
@@ -48,9 +47,6 @@ abstract class AbstractFailedMessagesCommand extends Command
 
     public function __construct(
         private ?string $globalFailureReceiverName,
-        /**
-         * @var ServiceProviderInterface<ReceiverInterface>
-         */
         protected ServiceProviderInterface $failureTransports,
         protected ?PhpSerializer $phpSerializer = null,
     ) {
@@ -64,6 +60,7 @@ abstract class AbstractFailedMessagesCommand extends Command
 
     protected function getMessageId(Envelope $envelope): mixed
     {
+        /** @var TransportMessageIdStamp $stamp */
         $stamp = $envelope->last(TransportMessageIdStamp::class);
 
         return $stamp?->getId();
@@ -75,32 +72,53 @@ abstract class AbstractFailedMessagesCommand extends Command
 
         $io->title('Failed Message Details');
 
-        $messageClass = $envelope->getMessage()::class;
+        /** @var SentToFailureTransportStamp|null $sentToFailureTransportStamp */
+        $sentToFailureTransportStamp = $envelope->last(SentToFailureTransportStamp::class);
+        /** @var RedeliveryStamp|null $lastRedeliveryStamp */
+        $lastRedeliveryStamp = $envelope->last(RedeliveryStamp::class);
+        /** @var ErrorDetailsStamp|null $lastErrorDetailsStamp */
         $lastErrorDetailsStamp = $envelope->last(ErrorDetailsStamp::class);
-        $lastMessageDecodingFailed = MessageDecodingFailedException::class === $messageClass || $envelope->last(MessageDecodingFailedStamp::class);
+        /** @var MessageDecodingFailedStamp|null $lastMessageDecodingFailedStamp */
+        $lastMessageDecodingFailedStamp = $envelope->last(MessageDecodingFailedStamp::class);
 
         $rows = [
-            ['Class', $messageClass],
+            ['Class', $envelope->getMessage()::class],
         ];
 
         if (null !== $id = $this->getMessageId($envelope)) {
             $rows[] = ['Message Id', $id];
         }
 
-        if (!$sentToFailureTransportStamp = $envelope->last(SentToFailureTransportStamp::class)) {
+        if (null === $sentToFailureTransportStamp) {
             $errorIo->warning('Message does not appear to have been sent to this transport after failing');
         } else {
+            $failedAt = '';
+            $errorMessage = '';
+            $errorCode = '';
+            $errorClass = '(unknown)';
+
+            if (null !== $lastRedeliveryStamp) {
+                $failedAt = $lastRedeliveryStamp->getRedeliveredAt()->format('Y-m-d H:i:s');
+            }
+
+            if (null !== $lastErrorDetailsStamp) {
+                $errorMessage = $lastErrorDetailsStamp->getExceptionMessage();
+                $errorCode = $lastErrorDetailsStamp->getExceptionCode();
+                $errorClass = $lastErrorDetailsStamp->getExceptionClass();
+            }
+
             $rows = array_merge($rows, [
-                ['Failed at', $envelope->last(RedeliveryStamp::class)?->getRedeliveredAt()->format('Y-m-d H:i:s') ?? ''],
-                ['Error', $lastErrorDetailsStamp?->getExceptionMessage() ?? ''],
-                ['Error Code', $lastErrorDetailsStamp?->getExceptionCode() ?? ''],
-                ['Error Class', $lastErrorDetailsStamp?->getExceptionClass() ?? '(unknown)'],
+                ['Failed at', $failedAt],
+                ['Error', $errorMessage],
+                ['Error Code', $errorCode],
+                ['Error Class', $errorClass],
                 ['Transport', $sentToFailureTransportStamp->getOriginalReceiverName()],
             ]);
         }
 
         $io->table([], $rows);
 
+        /** @var RedeliveryStamp[] $redeliveryStamps */
         $redeliveryStamps = $envelope->all(RedeliveryStamp::class);
         $io->writeln(' Message history:');
         foreach ($redeliveryStamps as $redeliveryStamp) {
@@ -110,7 +128,7 @@ abstract class AbstractFailedMessagesCommand extends Command
 
         if ($io->isVeryVerbose()) {
             $io->title('Message:');
-            if ($lastMessageDecodingFailed) {
+            if (null !== $lastMessageDecodingFailedStamp) {
                 $errorIo->error('The message could not be decoded. See below an APPROXIMATIVE representation of the class.');
             }
             $dump = new Dumper($io, null, $this->createCloner());
@@ -119,7 +137,7 @@ abstract class AbstractFailedMessagesCommand extends Command
             $flattenException = $lastErrorDetailsStamp?->getFlattenException();
             $io->writeln(null === $flattenException ? '(no data)' : $dump($flattenException));
         } else {
-            if ($lastMessageDecodingFailed) {
+            if (null !== $lastMessageDecodingFailedStamp) {
                 $errorIo->error('The message could not be decoded.');
             }
             $io->writeln(' Re-run command with <info>-vv</info> to see more message & error details.');

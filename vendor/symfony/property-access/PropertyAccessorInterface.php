@@ -39,11 +39,11 @@ interface PropertyAccessorInterface
      *
      * If neither is found, an exception is thrown.
      *
-     * @template T of object|mixed[]
+     * @template T of object|array
      *
      * @param T $objectOrArray
      *
-     * @param-out ($objectOrArray is object ? T : mixed[]) $objectOrArray
+     * @param-out ($objectOrArray is array ? array : T) $objectOrArray
      *
      * @throws Exception\InvalidArgumentException If the property path is invalid
      * @throws Exception\AccessException          If a property/index does not exist or is not public

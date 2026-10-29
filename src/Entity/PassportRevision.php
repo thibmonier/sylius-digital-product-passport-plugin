@@ -14,7 +14,7 @@ class PassportRevision
     #[ORM\Id]
     #[ORM\GeneratedValue(strategy: 'AUTO')]
     #[ORM\Column(type: Types::INTEGER)]
-    private ?int $id = null;
+    private ?int $id = null; // @phpstan-ignore property.unusedType (assigned by Doctrine)
 
     #[ORM\ManyToOne(targetEntity: DigitalProductPassport::class)]
     #[ORM\JoinColumn(name: 'passport_id', referencedColumnName: 'id', nullable: false, onDelete: 'CASCADE')]

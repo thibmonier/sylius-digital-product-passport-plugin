@@ -11,7 +11,6 @@
 
 namespace Symfony\Component\Messenger\Bridge\Doctrine\Transport;
 
-use Doctrine\DBAL\Connection as DBALConnection;
 use Doctrine\DBAL\Exception as DBALException;
 
 /**
@@ -26,16 +25,14 @@ use Doctrine\DBAL\Exception as DBALException;
 final class PostgreSqlConnection extends Connection
 {
     private bool $listening = false;
-    private bool $notifyHandledExternally = false;
 
     /**
      * * check_delayed_interval: The interval to check for delayed messages, in milliseconds. Set to 0 to disable checks. Default: 60000 (1 minute)
-     * * get_notify_timeout: The maximum time PostgreSqlNotifyOnIdleListener waits for a NOTIFY while the worker is idle,
-     *                       in milliseconds. Set to 0 to disable waiting. Default: 60000 (1 minute).
+     * * get_notify_timeout: The length of time to wait for a response when calling PDO::pgsqlGetNotify (or Pdo\Pgsql::getNotify on PHP 8.4+), in milliseconds. Default: 0.
      */
     protected const DEFAULT_OPTIONS = parent::DEFAULT_OPTIONS + [
         'check_delayed_interval' => 60000,
-        'get_notify_timeout' => 60000,
+        'get_notify_timeout' => 0,
     ];
 
     public function __serialize(): array
@@ -68,16 +65,11 @@ final class PostgreSqlConnection extends Connection
         $this->unlisten();
     }
 
-    public function get(int $fetchSize = 1): ?array
+    public function get(): ?array
     {
-        if ($this->notifyHandledExternally || null === $this->queueEmptiedAt) {
-            return parent::get($fetchSize);
+        if (null === $this->queueEmptiedAt) {
+            return parent::get();
         }
-
-        // Fallback: when no external listener handles LISTEN/NOTIFY, only collect the
-        // notifications that already arrived. Waiting for one is up to
-        // PostgreSqlNotifyOnIdleListener, which knows how long the worker can afford to
-        // block, while get() is called for a single receiver of that worker.
 
         // This is secure because the table name must be a valid identifier:
         // https://www.postgresql.org/docs/current/sql-syntax-lexical.html#SQL-SYNTAX-IDENTIFIERS
@@ -88,7 +80,9 @@ final class PostgreSqlConnection extends Connection
         /** @var \PDO $nativeConnection */
         $nativeConnection = $this->driverConnection->getNativeConnection();
 
-        $notification = $nativeConnection->getNotify(\PDO::FETCH_ASSOC, 0);
+        $notification = \PHP_VERSION_ID >= 80400
+            ? $nativeConnection->getNotify(\PDO::FETCH_ASSOC, $this->configuration['get_notify_timeout'])
+            : $nativeConnection->pgsqlGetNotify(\PDO::FETCH_ASSOC, $this->configuration['get_notify_timeout']);
         if (
             // no notifications, or for another table or queue
             (false === $notification || $notification['message'] !== $this->configuration['table_name'] || $notification['payload'] !== $this->configuration['queue_name'])
@@ -100,56 +94,7 @@ final class PostgreSqlConnection extends Connection
             return null;
         }
 
-        return parent::get($fetchSize);
-    }
-
-    /**
-     * Registers a LISTEN on the PostgreSQL connection for the configured table.
-     *
-     * When called, also disables the internal LISTEN/NOTIFY blocking in get(),
-     * assuming an external listener (e.g. PostgreSqlNotifyOnIdleListener) handles it.
-     *
-     * Safe to call multiple times; PostgreSQL ignores duplicate LISTEN for the same channel.
-     *
-     * @param bool $registerOnDatabase Whether to execute the SQL LISTEN command.
-     *                                 When false, only marks get() as externally handled
-     *                                 without registering on the database. This avoids
-     *                                 accumulating unread notifications on connections
-     *                                 that will never call waitForNotify().
-     */
-    public function listen(bool $registerOnDatabase = true): void
-    {
-        if ($registerOnDatabase) {
-            // This is secure because the table name must be a valid identifier:
-            // https://www.postgresql.org/docs/current/sql-syntax-lexical.html#SQL-SYNTAX-IDENTIFIERS
-            $this->executeStatement(\sprintf('LISTEN "%s"', $this->configuration['table_name']));
-            $this->listening = true;
-        }
-        $this->notifyHandledExternally = true;
-    }
-
-    public function getDriverConnection(): DBALConnection
-    {
-        return $this->driverConnection;
-    }
-
-    /**
-     * Blocks until a PostgreSQL NOTIFY is received or the timeout expires.
-     *
-     * Automatically registers a LISTEN before waiting to handle reconnections.
-     *
-     * @param int $timeoutMs The maximum time to wait in milliseconds
-     *
-     * @return bool True if a notification was received, false on timeout
-     */
-    public function waitForNotify(int $timeoutMs): bool
-    {
-        $this->listen();
-
-        /** @var \PDO $nativeConnection */
-        $nativeConnection = $this->driverConnection->getNativeConnection();
-
-        return false !== $nativeConnection->getNotify(\PDO::FETCH_ASSOC, $timeoutMs);
+        return parent::get();
     }
 
     private function unlisten(): void

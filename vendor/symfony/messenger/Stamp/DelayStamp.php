@@ -11,8 +11,6 @@
 
 namespace Symfony\Component\Messenger\Stamp;
 
-use Symfony\Component\Clock\Clock;
-
 /**
  * Apply this stamp to delay delivery of your message on a transport.
  */
@@ -33,7 +31,7 @@ final class DelayStamp implements StampInterface
 
     public static function delayFor(\DateInterval $interval): self
     {
-        $now = Clock::get()->withTimeZone(new \DateTimeZone('UTC'))->now();
+        $now = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
         $end = $now->add($interval);
 
         return new self(($end->getTimestamp() - $now->getTimestamp()) * 1000);
@@ -41,6 +39,6 @@ final class DelayStamp implements StampInterface
 
     public static function delayUntil(\DateTimeInterface $dateTime): self
     {
-        return new self(($dateTime->getTimestamp() - Clock::get()->now()->getTimestamp()) * 1000);
+        return new self(($dateTime->getTimestamp() - time()) * 1000);
     }
 }

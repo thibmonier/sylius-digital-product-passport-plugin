@@ -11,7 +11,6 @@
 
 namespace Symfony\Component\DependencyInjection\Loader\Configurator;
 
-use Symfony\Component\HttpKernel\EventListener\RateLimitAttributeListener;
 use Symfony\Component\RateLimiter\RateLimiterFactory;
 
 return static function (ContainerConfigurator $container) {
@@ -27,9 +26,5 @@ return static function (ContainerConfigurator $container) {
                 abstract_arg('storage'),
                 null,
             ])
-
-        ->set('rate_limiter.attribute_listener', RateLimitAttributeListener::class)
-            ->tag('kernel.event_subscriber')
-            ->args([tagged_locator('rate_limiter', 'name')])
     ;
 };

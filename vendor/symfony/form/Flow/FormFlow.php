@@ -208,9 +208,6 @@ class FormFlow extends Form implements FormFlowInterface
         $this->config->getDataStorage()->save($data);
     }
 
-    /**
-     * @param-immediately-invoked-callable $direction
-     */
     private function move(\Closure $direction): bool
     {
         $data = $this->getData();

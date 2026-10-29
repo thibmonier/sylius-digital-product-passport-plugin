@@ -11,7 +11,6 @@
 
 namespace Symfony\Component\Messenger\Middleware;
 
-use Psr\Clock\ClockInterface;
 use Psr\Log\LoggerAwareTrait;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\Exception\HandlerFailedException;
@@ -36,7 +35,6 @@ class HandleMessageMiddleware implements MiddlewareInterface
     public function __construct(
         private HandlersLocatorInterface $handlersLocator,
         private bool $allowNoHandlers = false,
-        private ?ClockInterface $clock = null,
     ) {
     }
 
@@ -73,7 +71,7 @@ class HandleMessageMiddleware implements MiddlewareInterface
                         }
 
                         $ackStamp->ack($envelope, $e);
-                    }, $this->clock);
+                    });
 
                     $result = $this->callHandler($handler, $message, $ack, $envelope->last(HandlerArgumentsStamp::class));
 
@@ -137,9 +135,6 @@ class HandleMessageMiddleware implements MiddlewareInterface
         return false;
     }
 
-    /**
-     * @param-immediately-invoked-callable $handler
-     */
     private function callHandler(\Closure $handler, object $message, ?Acknowledger $ack, ?HandlerArgumentsStamp $handlerArgumentsStamp): mixed
     {
         $arguments = [$message];

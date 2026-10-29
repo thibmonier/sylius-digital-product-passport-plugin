@@ -19,12 +19,8 @@ namespace Symfony\Component\Messenger\Exception;
  *
  * @author Jérémy Derussé <jeremy@derusse.com>
  *
- * @method bool forceRetry() Whether the worker should retry even when the max retry count has been reached
+ * @method int|null getRetryDelay() The time to wait in milliseconds
  */
 interface RecoverableExceptionInterface extends \Throwable
 {
-    /**
-     * Returns the time to wait before potentially retrying, in millisecond.
-     */
-    public function getRetryDelay(): ?int;
 }

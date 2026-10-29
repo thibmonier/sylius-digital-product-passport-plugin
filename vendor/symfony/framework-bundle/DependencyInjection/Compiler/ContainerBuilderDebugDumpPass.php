@@ -18,7 +18,6 @@ use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Dumper\XmlDumper;
 use Symfony\Component\DependencyInjection\ParameterBag\EnvPlaceholderParameterBag;
 use Symfony\Component\Filesystem\Filesystem;
-use Symfony\Component\VarExporter\DeepCloner;
 
 /**
  * Dumps the ContainerBuilder to a cache file so that it can be used by
@@ -49,13 +48,11 @@ class ContainerBuilderDebugDumpPass implements CompilerPassInterface
         $file = substr_replace($file, '.ser', -4);
 
         try {
-            $bag = $container->getParameterBag();
-            $dump = new ContainerBuilder($bag);
-            $dump->setDefinitions($container->getDefinitions());
+            $dump = new ContainerBuilder(clone $container->getParameterBag());
+            $dump->setDefinitions(unserialize(serialize($container->getDefinitions()), ['allowed_classes' => true]));
             $dump->setAliases($container->getAliases());
 
-            if ($bag instanceof EnvPlaceholderParameterBag) {
-                $dump = DeepCloner::deepClone($dump);
+            if (($bag = $container->getParameterBag()) instanceof EnvPlaceholderParameterBag) {
                 (new ResolveEnvPlaceholdersPass(null))->process($dump);
                 $dump->__construct(new EnvPlaceholderParameterBag($container->resolveEnvPlaceholders($this->escapeParameters($bag->all()))));
             }

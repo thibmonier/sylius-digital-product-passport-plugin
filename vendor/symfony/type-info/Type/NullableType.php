@@ -50,9 +50,6 @@ final class NullableType extends UnionType implements WrappingTypeInterface
         return $this->type;
     }
 
-    /**
-     * @param-immediately-invoked-callable $specification
-     */
     public function wrappedTypeIsSatisfiedBy(callable $specification): bool
     {
         return $this->getWrappedType()->isSatisfiedBy($specification);

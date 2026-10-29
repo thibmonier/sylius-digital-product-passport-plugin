@@ -45,10 +45,9 @@ class GraphvizDumper implements DumperInterface
     public function dump(Definition $definition, ?Marking $marking = null, array $options = []): string
     {
         $withMetadata = $options['with-metadata'] ?? false;
-        $listeners = $options['listeners'] ?? [];
 
         $places = $this->findPlaces($definition, $withMetadata, $marking);
-        $transitions = $this->findTransitions($definition, $withMetadata, $listeners);
+        $transitions = $this->findTransitions($definition, $withMetadata);
         $edges = $this->findEdges($definition);
 
         $options = array_replace_recursive(self::$defaultOptions, $options);
@@ -56,8 +55,8 @@ class GraphvizDumper implements DumperInterface
         $label = $this->formatLabel($definition, $withMetadata, $options);
 
         return $this->startDot($options, $label)
-            .$this->addPlaces($places)
-            .$this->addTransitions($transitions)
+            .$this->addPlaces($places, $withMetadata)
+            .$this->addTransitions($transitions, $withMetadata)
             .$this->addEdges($edges)
             .$this->endDot();
     }
@@ -85,7 +84,6 @@ class GraphvizDumper implements DumperInterface
                 $attributes['style'] = 'filled';
                 $attributes['fillcolor'] = $backgroundColor;
             }
-            $attributes['metadata'] = [];
             if ($withMetadata) {
                 $attributes['metadata'] = $workflowMetadata->getPlaceMetadata($place);
             }
@@ -108,13 +106,13 @@ class GraphvizDumper implements DumperInterface
     /**
      * @internal
      */
-    protected function findTransitions(Definition $definition, bool $withMetadata, array $listeners): array
+    protected function findTransitions(Definition $definition, bool $withMetadata): array
     {
         $workflowMetadata = $definition->getMetadataStore();
 
         $transitions = [];
 
-        foreach ($definition->getTransitions() as $k => $transition) {
+        foreach ($definition->getTransitions() as $transition) {
             $attributes = ['shape' => 'box', 'regular' => true];
 
             $backgroundColor = $workflowMetadata->getMetadata('bg_color', $transition);
@@ -127,19 +125,7 @@ class GraphvizDumper implements DumperInterface
             $metadata = [];
             if ($withMetadata) {
                 $metadata = $workflowMetadata->getTransitionMetadata($transition);
-                unset($metadata['label'], $metadata['bg_color']);
-            }
-            $transitionListeners = $listeners['transition__'.$k] ?? [];
-
-            $i = 0;
-            foreach ($transitionListeners as $eventListeners) {
-                foreach ($eventListeners as $details) {
-                    $title = $details['title'];
-                    if (isset($details['guardExpressions'])) {
-                        $title = 'Guard: '.implode(' && ', $details['guardExpressions']);
-                    }
-                    $metadata['Listener #'.$i++] = $title;
-                }
+                unset($metadata['label']);
             }
 
             $transitions[] = [
@@ -155,7 +141,7 @@ class GraphvizDumper implements DumperInterface
     /**
      * @internal
      */
-    protected function addPlaces(array $places): string
+    protected function addPlaces(array $places, bool $withMetadata): string
     {
         $code = '';
 
@@ -167,13 +153,13 @@ class GraphvizDumper implements DumperInterface
                 $placeName = $id;
             }
 
-            unset($place['attributes']['metadata']['bg_color']);
-            $description = $place['attributes']['metadata']['description'] ?? null;
-            unset($place['attributes']['metadata']['description']);
-            $descriptionLabel = null !== $description ? \sprintf('<BR/><I>%s</I>', $this->escapeHtml($description)) : '';
-            $escapedLabel = \sprintf('<<B>%s</B>%s%s>', $this->escapeHtml($placeName), $this->addMetadata($place['attributes']['metadata']), $descriptionLabel);
-            // Don't include metadata in default attributes used to format the place
-            unset($place['attributes']['metadata']);
+            if ($withMetadata) {
+                $escapedLabel = \sprintf('<<B>%s</B>%s>', $this->escapeHtml($placeName), $this->addMetadata($place['attributes']['metadata']));
+                // Don't include metadata in default attributes used to format the place
+                unset($place['attributes']['metadata']);
+            } else {
+                $escapedLabel = \sprintf('"%s"', $this->escape($placeName));
+            }
 
             $code .= \sprintf("  place_%s [label=%s, shape=circle%s];\n", $this->dotize($id), $escapedLabel, $this->addAttributes($place['attributes']));
         }
@@ -184,15 +170,16 @@ class GraphvizDumper implements DumperInterface
     /**
      * @internal
      */
-    protected function addTransitions(array $transitions): string
+    protected function addTransitions(array $transitions, bool $withMetadata): string
     {
         $code = '';
 
         foreach ($transitions as $i => $place) {
-            $description = $place['metadata']['description'] ?? null;
-            unset($place['metadata']['description']);
-            $descriptionLabel = null !== $description ? \sprintf('<BR/><I>%s</I>', $this->escapeHtml($description)) : '';
-            $escapedLabel = \sprintf('<<B>%s</B>%s%s>', $this->escapeHtml($place['name']), $this->addMetadata($place['metadata']), $descriptionLabel);
+            if ($withMetadata) {
+                $escapedLabel = \sprintf('<<B>%s</B>%s>', $this->escapeHtml($place['name']), $this->addMetadata($place['metadata']));
+            } else {
+                $escapedLabel = '"'.$this->escape($place['name']).'"';
+            }
 
             $code .= \sprintf("  transition_%s [label=%s,%s];\n", $this->dotize($i), $escapedLabel, $this->addAttributes($place['attributes']));
         }
@@ -301,19 +288,13 @@ class GraphvizDumper implements DumperInterface
     /**
      * @internal
      */
-    protected function escapeHtml(mixed $value): string
+    protected function escapeHtml(string|bool $value): string
     {
         if (\is_bool($value)) {
             return $value ? '1' : '0';
         }
-        if (null === $value) {
-            return '';
-        }
-        if (\is_array($value) || (\is_object($value) && !$value instanceof \Stringable)) {
-            $value = json_encode($value, \JSON_UNESCAPED_SLASHES | \JSON_UNESCAPED_UNICODE);
-        }
 
-        return htmlspecialchars((string) $value, \ENT_XML1 | \ENT_QUOTES, 'UTF-8');
+        return htmlspecialchars($value, \ENT_XML1 | \ENT_QUOTES, 'UTF-8');
     }
 
     /**
@@ -347,18 +328,14 @@ class GraphvizDumper implements DumperInterface
             return \sprintf('"%s"', $this->escape($currentLabel));
         }
         $workflowMetadata = $definition->getMetadataStore()->getWorkflowMetadata();
-        unset($workflowMetadata['bg_color']);
-        $description = $workflowMetadata['description'] ?? null;
-        unset($workflowMetadata['description']);
-        $description = null !== $description ? '<I>'.$this->escapeHtml($description).'</I>' : '';
 
         if ('' === $currentLabel) {
-            $metadata = $this->addMetadata($workflowMetadata, false);
-
-            return \sprintf('<%s%s%s>', $metadata, '' !== $metadata && '' !== $description ? '<BR/>' : '', $description);
+            // Only metadata to handle
+            return \sprintf('<%s>', $this->addMetadata($workflowMetadata, false));
         }
 
-        return \sprintf('<<B>%s</B>%s%s%s>', $this->escapeHtml($currentLabel), $this->addMetadata($workflowMetadata), '' !== $description ? '<BR/>' : '', $description);
+        // currentLabel and metadata to handle
+        return \sprintf('<<B>%s</B>%s>', $this->escapeHtml($currentLabel), $this->addMetadata($workflowMetadata));
     }
 
     private function addOptions(array $options): string

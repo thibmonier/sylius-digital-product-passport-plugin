@@ -40,7 +40,8 @@ class CollectionType extends Type implements WrappingTypeInterface
 
         if ($this->isList()) {
             if (!$type->isIdentifiedBy(TypeIdentifier::ARRAY)) {
-                throw new InvalidArgumentException(\sprintf('Cannot create a "%s" as list when type is not "array".', self::class));
+                trigger_deprecation('symfony/type-info', '7.3', 'Creating a "%s" that is a list and not an array is deprecated and will throw a "%s" in 8.0.', self::class, InvalidArgumentException::class);
+                // throw new InvalidArgumentException(\sprintf('Cannot create a "%s" as list when type is not "array".', self::class));
             }
 
             $keyType = $this->getCollectionKeyType();
@@ -175,9 +176,6 @@ class CollectionType extends Type implements WrappingTypeInterface
         return $defaultCollectionValueType;
     }
 
-    /**
-     * @param-immediately-invoked-callable $specification
-     */
     public function wrappedTypeIsSatisfiedBy(callable $specification): bool
     {
         return $this->getWrappedType()->isSatisfiedBy($specification);

@@ -15,7 +15,6 @@ use Symfony\Component\Console\Exception\LogicException;
 use Symfony\Component\Console\Exception\RuntimeException;
 use Symfony\Component\DependencyInjection\Alias;
 use Symfony\Component\DependencyInjection\Argument\AbstractArgument;
-use Symfony\Component\DependencyInjection\Argument\EnvClosureArgument;
 use Symfony\Component\DependencyInjection\Argument\IteratorArgument;
 use Symfony\Component\DependencyInjection\Argument\ServiceClosureArgument;
 use Symfony\Component\DependencyInjection\Argument\ServiceLocatorArgument;
@@ -77,9 +76,14 @@ class XmlDescriptor extends Descriptor
     {
         $dom = new \DOMDocument('1.0', 'UTF-8');
         $dom->appendChild($dom->importNode($this->getContainerAliasDocument($alias, $options['id'] ?? null)->childNodes->item(0), true));
-        if ($container) {
-            $dom->appendChild($dom->importNode($this->getContainerDefinitionDocument($container->getDefinition((string) $alias), (string) $alias, false, $container)->childNodes->item(0), true));
+
+        if (!$container) {
+            $this->writeDocument($dom);
+
+            return;
         }
+
+        $dom->appendChild($dom->importNode($this->getContainerDefinitionDocument($container->getDefinition((string) $alias), (string) $alias, false, $container)->childNodes->item(0), true));
 
         $this->writeDocument($dom);
     }
@@ -407,17 +411,6 @@ class XmlDescriptor extends Descriptor
                     $usageXML->appendChild(new \DOMText($edge));
                 }
             }
-
-            $stack = $this->getDecorationStack($container, $id);
-            if (\count($stack) > 1) {
-                $serviceXML->appendChild($stackXML = $dom->createElement('decoration-stack'));
-                foreach ($stack as $item) {
-                    $stackXML->appendChild($itemXML = $dom->createElement('service'));
-                    $itemXML->setAttribute('id', $item['id']);
-                    $itemXML->setAttribute('class', $item['class']);
-                    $itemXML->setAttribute('priority', $item['priority']);
-                }
-            }
         }
 
         return $dom;
@@ -450,15 +443,6 @@ class XmlDescriptor extends Descriptor
                 foreach ($this->getArgumentNodes($argument->getValues(), $dom, $container) as $childArgumentXML) {
                     $argumentXML->appendChild($childArgumentXML);
                 }
-            } elseif ($argument instanceof EnvClosureArgument) {
-                $argumentXML->setAttribute('type', 'env_closure');
-                if ($argument->isStringable()) {
-                    $argumentXML->setAttribute('stringable', 'true');
-                }
-                if (null !== $default = $argument->getDefault()) {
-                    $argumentXML->setAttribute('default', $this->formatParameter($default));
-                }
-                $argumentXML->appendChild(new \DOMText($argument->getValue()));
             } elseif ($argument instanceof Definition) {
                 $argumentXML->appendChild($dom->importNode($this->getContainerDefinitionDocument($argument, null, false, $container)->childNodes->item(0), true));
             } elseif ($argument instanceof AbstractArgument) {

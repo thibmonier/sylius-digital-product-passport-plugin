@@ -25,10 +25,6 @@
         #collector-content .sf-serializer .trace li.selected {
             background: var(--highlight-selected-line);
         }
-        #collector-content .sf-serializer .sf-serializer-compact-list {
-            line-height: 80%;
-            margin-top: 10px;
-        }
     </style>
 {% endblock %}
 
@@ -93,7 +89,7 @@
 
 {% block menu %}
     <span class="label {{ not collector.handledCount ? 'disabled' }}">
-        <span class="icon" aria-hidden="true">{{ source('@WebProfiler/Icon/serializer.svg') }}</span>
+        <span class="icon">{{ source('@WebProfiler/Icon/serializer.svg') }}</span>
         <strong>Serializer</strong>
     </span>
 {% endblock %}
@@ -129,7 +125,7 @@
 
 {% macro render_serializer_tab(collector, serializer) %}
     <div class="tab">
-        <h3 class="tab-title">{{ serializer }} <span class="badge">{{ collector.handledCount(serializer) }}</span></h3>
+        <h3 class="tab-title">{{ serializer }} <span class="badge">{{ collector.handledCount(serializer) }}</h3>
         <div class="tab-content">
             <div class="sf-tabs">
                 {{ _self.render_serialize_tab(collector.data(serializer), true, serializer) }}
@@ -150,7 +146,7 @@
     {% set cellPrefix = serialize ? 'serialize' : 'deserialize' %}
 
     <div class="tab {{ not data ? 'disabled' }}">
-        <h3 class="tab-title">{{ serialize ? 'serialize' : 'deserialize' }} <span class="badge">{{ data|length }}</span></h3>
+        <h3 class="tab-title">{{ serialize ? 'serialize' : 'deserialize' }} <span class="badge">{{ data|length }}</h3>
         <div class="tab-content">
             {% if not data|length %}
                 <div class="empty">
@@ -223,7 +219,7 @@
     {% set cellPrefix = normalize ? 'normalize' : 'denormalize' %}
 
     <div class="tab {{ not data ? 'disabled' }}">
-        <h3 class="tab-title">{{ normalize ? 'normalize' : 'denormalize' }} <span class="badge">{{ data|length }}</span></h3>
+        <h3 class="tab-title">{{ normalize ? 'normalize' : 'denormalize' }} <span class="badge">{{ data|length }}</h3>
         <div class="tab-content">
             {% if not data|length %}
                 <div class="empty">
@@ -262,7 +258,7 @@
     {% set cellPrefix = encode ? 'encode' : 'decode' %}
 
     <div class="tab {{ not data ? 'disabled' }}">
-        <h3 class="tab-title">{{ encode ? 'encode' : 'decode' }} <span class="badge">{{ data|length }}</span></h3>
+        <h3 class="tab-title">{{ encode ? 'encode' : 'decode' }} <span class="badge">{{ data|length }}</h3>
         <div class="tab-content">
             {% if not data|length %}
                 <div class="empty">
@@ -338,7 +334,7 @@
         <div>
             <button type="button" class="btn btn-link text-small sf-toggle" data-toggle-selector="#{{ nested_normalizers_id }}" data-toggle-alt-content="Hide nested normalizers">Show nested normalizers</button>
             <div id="{{ nested_normalizers_id }}" class="context sf-toggle-content sf-toggle-hidden">
-                <ul class="text-small sf-serializer-compact-list">
+                <ul class="text-small" style="line-height:80%;margin-top:10px">
                     {% for normalizer in item.normalization %}
                         <li><span class="nowrap">x{{ normalizer.calls }} <a href="{{ normalizer.file|file_link(normalizer.line) }}" title="{{ normalizer.file }}">{{ normalizer.class }}</a> ({{ '%.2f'|format(normalizer.time * 1000) }} ms)</span></li>
                     {% endfor %}
@@ -359,7 +355,7 @@
         <div>
             <button type="button" class="btn btn-link text-small sf-toggle" data-toggle-selector="#{{ nested_encoders_id }}" data-toggle-alt-content="Hide nested encoders">Show nested encoders</button>
             <div id="{{ nested_encoders_id }}" class="context sf-toggle-content sf-toggle-hidden">
-                <ul class="text-small sf-serializer-compact-list">
+                <ul class="text-small" style="line-height:80%;margin-top:10px">
                     {% for encoder in item.encoding %}
                         <li><span class="nowrap">x{{ encoder.calls }} <a href="{{ encoder.file|file_link(encoder.line) }}" title="{{ encoder.file }}">{{ encoder.class }}</a> ({{ '%.2f'|format(encoder.time * 1000) }} ms)</span></li>
                     {% endfor %}

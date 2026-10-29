@@ -21,7 +21,7 @@
     </div>
 
         <div id="content">
-            <main id="main">
+            <div id="main">
                 <div id="sidebar">
                     {% block sidebar %}
                         <div id="sidebar-contents">
@@ -35,7 +35,6 @@
                             </div>
 
                             {% if templates is defined %}
-                                <nav aria-label="Profiler menu">
                                 <ul id="menu-profiler">
                                     {% if 'request' is same as(profile_type) %}
                                         {% set excludes = ['command'] %}
@@ -53,12 +52,11 @@
                                         {%- endset %}
                                         {% if menu is not empty %}
                                             <li class="{{ name }} {{ name == panel ? 'selected' }}">
-                                                <a href="{{ path('_profiler', {token: token, panel: name, type: profile_type}) }}"{{ name == panel ? ' aria-current="page"' }}>{{ menu|raw }}</a>
+                                                <a href="{{ path('_profiler', {token: token, panel: name, type: profile_type}) }}">{{ menu|raw }}</a>
                                             </li>
                                         {% endif %}
                                     {% endfor %}
                                 </ul>
-                                </nav>
                             {% endif %}
                         </div>
 
@@ -72,7 +70,7 @@
                         {% block panel '' %}
                     </div>
                 </div>
-            </main>
+            </div>
         </div>
     </div>
 {% endblock %}

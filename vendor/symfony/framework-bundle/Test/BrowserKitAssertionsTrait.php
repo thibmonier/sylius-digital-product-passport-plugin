@@ -59,7 +59,11 @@ trait BrowserKitAssertionsTrait
 
         $constraints = [new ResponseConstraint\ResponseIsRedirected($verbose)];
         if ($expectedLocation) {
-            $constraints[] = new ResponseConstraint\ResponseHeaderLocationSame(self::getRequest(), $expectedLocation);
+            if (class_exists(ResponseConstraint\ResponseHeaderLocationSame::class)) {
+                $constraints[] = new ResponseConstraint\ResponseHeaderLocationSame(self::getRequest(), $expectedLocation);
+            } else {
+                $constraints[] = new ResponseConstraint\ResponseHeaderSame('Location', $expectedLocation);
+            }
         }
         if ($expectedCode) {
             $constraints[] = new ResponseConstraint\ResponseStatusCodeSame($expectedCode, $verbose);
@@ -186,11 +190,6 @@ trait BrowserKitAssertionsTrait
         }
 
         self::assertThat(self::getRequest(), $constraint, $message);
-    }
-
-    public static function assertSessionHasFlashMessage(string $messageType, string|array $messages = ''): void
-    {
-        static::assertThat(self::getRequest(), new ResponseConstraint\SessionHasFlashMessage($messageType, $messages));
     }
 
     public static function assertThatForResponse(Constraint $constraint, string $message = ''): void

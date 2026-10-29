@@ -24,10 +24,6 @@ class AsMessage
          * Name of the transports to which the message should be routed.
          */
         public string|array|null $transport = null,
-        /**
-         * The serialized type to use when sending or receiving the message.
-         */
-        public ?string $serializedTypeName = null,
     ) {
     }
 }

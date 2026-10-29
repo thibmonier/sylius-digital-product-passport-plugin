@@ -28,9 +28,6 @@ class UserPasswordValidator extends ConstraintValidator
     ) {
     }
 
-    /**
-     * @psalm-suppress ParamNameMismatch
-     */
     public function validate(mixed $password, Constraint $constraint): void
     {
         if (!$constraint instanceof UserPassword) {

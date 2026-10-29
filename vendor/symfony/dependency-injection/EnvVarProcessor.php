@@ -64,9 +64,6 @@ class EnvVarProcessor implements EnvVarProcessorInterface, ResetInterface
         ];
     }
 
-    /**
-     * @param-immediately-invoked-callable $getEnv
-     */
     public function getEnv(string $prefix, string $name, \Closure $getEnv): mixed
     {
         $i = strpos($name, ':');

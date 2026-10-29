@@ -62,7 +62,6 @@ class Container implements ContainerInterface, ResetInterface
     protected array $loading = [];
     protected array $resolving = [];
     protected array $syntheticIds = [];
-    private ?\WeakMap $resetMap = null;
 
     private array $envCache = [];
     private bool $compiled = false;
@@ -292,10 +291,6 @@ class Container implements ContainerInterface, ResetInterface
         }
 
         $this->envCache = $this->services = $this->factories = $this->privates = [];
-        // Non-shared tracked instances are not reset here because Container::reset()
-        // tears down the entire container. ServicesResetter::reset() handles calling
-        // reset methods on tracked instances during the request lifecycle.
-        $this->resetMap = null;
         // the closures that reference the container itself are created again when needed
         unset($this->getEnv, $this->getService);
     }
@@ -414,31 +409,6 @@ class Container implements ContainerInterface, ResetInterface
         return ($factory = $this->factories[$id] ?? $this->factories['service_container'][$id] ?? null) ? $factory($this) : $this->load($method);
     }
 
-    /**
-     * Registers an instance of a non-shared service for reset tracking.
-     *
-     * @param list<string> $resetMethods
-     *
-     * @internal
-     */
-    final protected function trackForReset(object $instance, array $resetMethods): object
-    {
-        $this->resetMap ??= new \WeakMap();
-        $this->resetMap[$instance] = $resetMethods;
-
-        return $instance;
-    }
-
-    /**
-     * Returns the WeakMap used to track non-shared service instances for reset.
-     *
-     * @internal
-     */
-    final protected function getResetMap(): \WeakMap
-    {
-        return $this->resetMap ??= new \WeakMap();
-    }
-
     private static function isUninitializedLazyObject(object $service): bool
     {
         if ($service instanceof LazyObjectInterface && !$service->isLazyObjectInitialized(true)) {
@@ -449,7 +419,7 @@ class Container implements ContainerInterface, ResetInterface
             return true;
         }
 
-        return (new \ReflectionClass($service))->isUninitializedLazyObject($service);
+        return \PHP_VERSION_ID >= 80400 && (new \ReflectionClass($service))->isUninitializedLazyObject($service);
     }
 
     private function __clone()

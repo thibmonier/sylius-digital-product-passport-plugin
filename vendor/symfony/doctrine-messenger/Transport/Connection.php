@@ -11,10 +11,10 @@
 
 namespace Symfony\Component\Messenger\Bridge\Doctrine\Transport;
 
-use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection as DBALConnection;
 use Doctrine\DBAL\Exception as DBALException;
 use Doctrine\DBAL\Exception\TableNotFoundException;
+use Doctrine\DBAL\LockMode;
 use Doctrine\DBAL\Platforms\OraclePlatform;
 use Doctrine\DBAL\Platforms\PostgreSQLPlatform;
 use Doctrine\DBAL\Query\ForUpdate\ConflictResolutionMode;
@@ -60,6 +60,7 @@ class Connection implements ResetInterface
     protected ?float $queueEmptiedAt = null;
 
     private bool $autoSetup;
+    private bool $doMysqlCleanup = false;
 
     /**
      * Constructor.
@@ -83,6 +84,7 @@ class Connection implements ResetInterface
     public function reset(): void
     {
         $this->queueEmptiedAt = null;
+        $this->doMysqlCleanup = false;
     }
 
     public function getConfiguration(): array
@@ -164,14 +166,14 @@ class Connection implements ResetInterface
         ]);
     }
 
-    public function get(int $fetchSize = 1): ?array
+    public function get(): ?array
     {
         get:
         $this->driverConnection->beginTransaction();
         try {
             $query = $this->createAvailableMessagesQueryBuilder()
                 ->orderBy('available_at', 'ASC')
-                ->setMaxResults($fetchSize);
+                ->setMaxResults(1);
 
             if ($this->driverConnection->getDatabasePlatform() instanceof OraclePlatform) {
                 $query->select('m.id');
@@ -189,15 +191,29 @@ class Connection implements ResetInterface
                 $sql = $query->getSQL();
             }
 
-            $sql = $this->addLockMode($query, $sql);
+            if (method_exists(QueryBuilder::class, 'forUpdate')) {
+                $sql = $this->addLockMode($query, $sql);
+            } else {
+                if (preg_match('/FROM (.+) WHERE/', $sql, $matches)) {
+                    $fromClause = $matches[1];
+                    $sql = str_replace(
+                        \sprintf('FROM %s WHERE', $fromClause),
+                        \sprintf('FROM %s WHERE', $this->driverConnection->getDatabasePlatform()->appendLockHint($fromClause, LockMode::PESSIMISTIC_WRITE)),
+                        $sql
+                    );
+                }
 
-            $doctrineEnvelopes = $this->executeQuery(
+                // use SELECT ... FOR UPDATE to lock table
+                $sql .= ' '.$this->driverConnection->getDatabasePlatform()->getWriteLockSQL();
+            }
+
+            $doctrineEnvelope = $this->executeQuery(
                 $sql,
                 $query->getParameters(),
                 $query->getParameterTypes()
-            )->fetchAllAssociative();
+            )->fetchAssociative();
 
-            if ([] === $doctrineEnvelopes) {
+            if (false === $doctrineEnvelope) {
                 $this->driverConnection->commit();
                 $this->queueEmptiedAt = microtime(true) * 1000;
 
@@ -207,41 +223,23 @@ class Connection implements ResetInterface
             // We need to be sure to empty the queue before blocking again
             $this->queueEmptiedAt = null;
 
-            $doctrineEnvelopes = array_map($this->decodeEnvelopeHeaders(...), $doctrineEnvelopes);
+            $doctrineEnvelope = $this->decodeEnvelopeHeaders($doctrineEnvelope);
 
+            $queryBuilder = $this->driverConnection->createQueryBuilder()
+                ->update($this->configuration['table_name'])
+                ->set('delivered_at', '?')
+                ->where('id = ?');
             $now = new \DateTimeImmutable('UTC');
-
-            if (1 === \count($doctrineEnvelopes)) {
-                $queryBuilder = $this->driverConnection->createQueryBuilder()
-                    ->update($this->configuration['table_name'])
-                    ->set('delivered_at', '?')
-                    ->where('id = ?');
-
-                $this->executeStatement($queryBuilder->getSQL(), [
-                    $now,
-                    $doctrineEnvelopes[0]['id'],
-                ], [
-                    Types::DATETIME_IMMUTABLE,
-                ]);
-            } else {
-                $ids = array_column($doctrineEnvelopes, 'id');
-                $queryBuilder = $this->driverConnection->createQueryBuilder()
-                    ->update($this->configuration['table_name'])
-                    ->set('delivered_at', '?')
-                    ->where('id IN (?)');
-
-                $this->executeStatement($queryBuilder->getSQL(), [
-                    $now,
-                    $ids,
-                ], [
-                    Types::DATETIME_IMMUTABLE,
-                    ArrayParameterType::STRING,
-                ]);
-            }
+            $this->executeStatement($queryBuilder->getSQL(), [
+                $now,
+                $doctrineEnvelope['id'],
+            ], [
+                Types::DATETIME_IMMUTABLE,
+            ]);
 
             $this->driverConnection->commit();
 
-            return $doctrineEnvelopes;
+            return $doctrineEnvelope;
         } catch (\Throwable $e) {
             if ($this->driverConnection->isTransactionActive()) {
                 $this->driverConnection->rollBack();
@@ -362,9 +360,9 @@ class Connection implements ResetInterface
     /**
      * @internal
      *
-     * @param-immediately-invoked-callable $isSameDatabase
+     * @return Schema The (possibly new) schema with the table added
      */
-    public function configureSchema(Schema $schema, DBALConnection $forConnection, \Closure $isSameDatabase): Schema
+    public function configureSchema(Schema $schema, DBALConnection $forConnection, \Closure $isSameDatabase)
     {
         if ($schema->hasTable($this->configuration['table_name'])) {
             return $schema;
@@ -375,6 +373,14 @@ class Connection implements ResetInterface
         }
 
         return $this->addTableToSchema($schema);
+    }
+
+    /**
+     * @internal
+     */
+    public function getExtraSetupSqlForTable(Table $createdTable): array
+    {
+        return [];
     }
 
     private function createAvailableMessagesQueryBuilder(): QueryBuilder
@@ -585,7 +591,11 @@ class Connection implements ResetInterface
         $table->addColumn('created_at', Types::DATETIME_IMMUTABLE, ['notnull' => true]);
         $table->addColumn('available_at', Types::DATETIME_IMMUTABLE, ['notnull' => true]);
         $table->addColumn('delivered_at', Types::DATETIME_IMMUTABLE, ['notnull' => false]);
-        $table->addPrimaryKeyConstraint(new PrimaryKeyConstraint(null, [new UnqualifiedName(Identifier::unquoted('id'))], true));
+        if (class_exists(PrimaryKeyConstraint::class)) {
+            $table->addPrimaryKeyConstraint(new PrimaryKeyConstraint(null, [new UnqualifiedName(Identifier::unquoted('id'))], true));
+        } else {
+            $table->setPrimaryKey(['id']);
+        }
         $table->addIndex(['queue_name', 'available_at', 'delivered_at', 'id']);
     }
 

@@ -2,7 +2,7 @@
 
 {% block menu %}
     <span class="label">
-        <span class="icon" aria-hidden="true">{{ source('@WebProfiler/Icon/command.svg') }}</span>
+        <span class="icon">{{ source('@WebProfiler/Icon/command.svg') }}</span>
         <strong>Console Command</strong>
     </span>
 {% endblock %}
@@ -72,7 +72,7 @@
 
                 {% if collector.arguments is empty %}
                     <div class="empty">
-                        <p>No arguments.</p>
+                        <p>No arguments were set</p>
                     </div>
                 {% else %}
                     {{ include('@WebProfiler/Profiler/table.html.twig', {data: collector.arguments, labels: ['Argument', 'Value'], maxDepth: 2}, with_context: false) }}
@@ -82,7 +82,7 @@
 
                 {% if collector.options is empty %}
                     <div class="empty">
-                        <p>No options.</p>
+                        <p>No options were set</p>
                     </div>
                 {% else %}
                     {{ include('@WebProfiler/Profiler/table.html.twig', {data: collector.options, labels: ['Option', 'Value'], maxDepth: 2}, with_context: false) }}
@@ -97,7 +97,7 @@
 
                     {% if collector.interactiveInputs is empty %}
                         <div class="empty">
-                            <p>No inputs.</p>
+                            <p>No inputs were set</p>
                         </div>
                     {% else %}
                         {{ include('@WebProfiler/Profiler/table.html.twig', {data: collector.interactiveInputs, labels: ['Input', 'Value'], maxDepth: 2}, with_context: false) }}
@@ -108,7 +108,7 @@
 
                 {% if collector.applicationInputs is empty %}
                     <div class="empty">
-                        <p>No application inputs.</p>
+                        <p>No application inputs are set</p>
                     </div>
                 {% else %}
                     {{ include('@WebProfiler/Profiler/table.html.twig', {data: collector.applicationInputs, labels: ['Input', 'Value'], maxDepth: 2}, with_context: false) }}
@@ -121,16 +121,14 @@
 
             <div class="tab-content">
                 <table>
-                    <tbody>
-                        <tr>
-                            <th class="font-normal" scope="row">Input</th>
-                            <td class="font-normal">{{ profiler_dump(collector.input) }}</td>
-                        </tr>
-                        <tr>
-                            <th class="font-normal" scope="row">Output</th>
-                            <td class="font-normal">{{ profiler_dump(collector.output) }}</td>
-                        </tr>
-                    </tbody>
+                    <tr>
+                        <td class="font-normal">Input</td>
+                        <td class="font-normal">{{ profiler_dump(collector.input) }}</td>
+                    </tr>
+                    <tr>
+                        <td class="font-normal">Output</td>
+                        <td class="font-normal">{{ profiler_dump(collector.output) }}</td>
+                    </tr>
                 </table>
             </div>
         </div>
@@ -144,7 +142,7 @@
                         <p>No helpers</p>
                     </div>
                 {% else %}
-                    <table>
+                    <table class="{{ class|default('') }}">
                         <thead>
                         <tr>
                             <th scope="col">Helpers</th>

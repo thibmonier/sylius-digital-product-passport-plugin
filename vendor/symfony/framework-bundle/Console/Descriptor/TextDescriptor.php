@@ -18,7 +18,6 @@ use Symfony\Component\Console\Helper\TableCell;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\DependencyInjection\Alias;
 use Symfony\Component\DependencyInjection\Argument\AbstractArgument;
-use Symfony\Component\DependencyInjection\Argument\EnvClosureArgument;
 use Symfony\Component\DependencyInjection\Argument\IteratorArgument;
 use Symfony\Component\DependencyInjection\Argument\ServiceClosureArgument;
 use Symfony\Component\DependencyInjection\Argument\ServiceLocatorArgument;
@@ -419,8 +418,6 @@ class TextDescriptor extends Descriptor
                     }
                 } elseif ($argument instanceof ServiceLocatorArgument) {
                     $argumentsInformation[] = \sprintf('Service locator (%d element(s))', \count($argument->getValues()));
-                } elseif ($argument instanceof EnvClosureArgument) {
-                    $argumentsInformation[] = \sprintf('%s (%s%s)', $argument->isStringable() ? 'Stringable env closure' : 'Env closure', $argument->getValue(), null !== $argument->getDefault() ? ', default: '.$this->formatParameter($argument->getDefault()) : '');
                 } elseif ($argument instanceof Definition) {
                     $argumentsInformation[] = 'Inlined Service';
                 } elseif ($argument instanceof \UnitEnum) {
@@ -439,15 +436,6 @@ class TextDescriptor extends Descriptor
         $tableRows[] = ['Usages', $inEdges ? implode(\PHP_EOL, $inEdges) : 'none'];
 
         $options['output']->table($tableHeaders, $tableRows);
-
-        if (isset($options['id']) && $container) {
-            $stack = $this->getDecorationStack($container, $options['id']);
-
-            if (\count($stack) > 1) {
-                $options['output']->section('Decoration Stack');
-                $options['output']->table(['ID', 'Class', 'Priority'], array_map(static fn ($item) => array_values($item), $stack));
-            }
-        }
     }
 
     protected function describeContainerDeprecations(ContainerBuilder $container, array $options = []): void
@@ -651,8 +639,6 @@ class TextDescriptor extends Descriptor
     }
 
     /**
-     * @param-immediately-invoked-callable $getContainer
-     *
      * @param (callable():ContainerBuilder)|null $getContainer
      */
     private function formatControllerLink(mixed $controller, string $anchorText, ?callable $getContainer = null): string

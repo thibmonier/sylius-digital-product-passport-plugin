@@ -18,7 +18,6 @@ use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Exception\InvalidArgumentException;
 use Symfony\Component\DependencyInjection\Exception\ServiceNotFoundException;
 use Symfony\Component\DependencyInjection\Loader\PhpFileLoader;
-use Symfony\Component\VarExporter\DeepCloner;
 
 /**
  * @author Nicolas Grekas <p@tchwork.com>
@@ -90,7 +89,7 @@ class ServicesConfigurator extends AbstractConfigurator
         $definition->setAutowired($defaults->isAutowired());
         $definition->setAutoconfigured($defaults->isAutoconfigured());
         // deep clone, to avoid multiple process of the same instance in the passes
-        $definition->setBindings(DeepCloner::deepClone($defaults->getBindings()));
+        $definition->setBindings(unserialize(serialize($defaults->getBindings()), ['allowed_classes' => true]));
         $definition->setChanges([]);
 
         $configurator = new ServiceConfigurator($this->container, $this->instanceof, true, $this, $definition, $id, $defaults->getTags(), $this->path);
@@ -149,7 +148,7 @@ class ServicesConfigurator extends AbstractConfigurator
      *
      * @param InlineServiceConfigurator[]|ReferenceConfigurator[] $services
      */
-    final public function stack(string $id, array $services): StackConfigurator
+    final public function stack(string $id, array $services): AliasConfigurator
     {
         foreach ($services as $i => $service) {
             if ($service instanceof InlineServiceConfigurator) {
@@ -167,13 +166,14 @@ class ServicesConfigurator extends AbstractConfigurator
             }
         }
 
-        $definition = $this->set($id)
+        $alias = $this->alias($id, '');
+        $alias->definition = $this->set($id)
             ->parent('')
             ->args($services)
             ->tag('container.stack')
             ->definition;
 
-        return new StackConfigurator($this, $definition);
+        return $alias;
     }
 
     /**

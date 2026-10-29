@@ -29,6 +29,26 @@ abstract class Extension implements ExtensionInterface, ConfigurationExtensionIn
     private array $processedConfigs = [];
 
     /**
+     * @return string|false
+     *
+     * @deprecated since Symfony 7.4, to be removed in Symfony 8.0 together with XML support.
+     */
+    public function getXsdValidationBasePath()
+    {
+        return false;
+    }
+
+    /**
+     * @return string
+     *
+     * @deprecated since Symfony 7.4, to be removed in Symfony 8.0 together with XML support.
+     */
+    public function getNamespace()
+    {
+        return 'http://example.org/schema/dic/'.$this->getAlias();
+    }
+
+    /**
      * Returns the recommended alias to use in XML.
      *
      * This alias is also the mandatory prefix to use when using YAML.
@@ -57,7 +77,10 @@ abstract class Extension implements ExtensionInterface, ConfigurationExtensionIn
         return Container::underscore($classBaseName);
     }
 
-    public function getConfiguration(array $config, ContainerBuilder $container): ?ConfigurationInterface
+    /**
+     * @return ConfigurationInterface|null
+     */
+    public function getConfiguration(array $config, ContainerBuilder $container)
     {
         $class = static::class;
 

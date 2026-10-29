@@ -62,6 +62,7 @@ final class PassportJsonExportTest extends KernelTestCase
         $json = $passport->toJson();
 
         $data = json_decode($json, true);
+        self::assertIsArray($data);
 
         // Verify schema version
         self::assertArrayHasKey('schemaVersion', $data);

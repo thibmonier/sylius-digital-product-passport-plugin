@@ -12,6 +12,7 @@
 namespace Symfony\Bundle\FrameworkBundle\Command;
 
 use Symfony\Component\Config\ConfigCache;
+use Symfony\Component\Config\FileLocator;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Exception\RuntimeException;
@@ -27,6 +28,8 @@ use Symfony\Component\DependencyInjection\Compiler\ResolveParameterPlaceHoldersP
 use Symfony\Component\DependencyInjection\Compiler\ResolveTaggedIteratorArgumentPass;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Exception\InvalidArgumentException;
+use Symfony\Component\DependencyInjection\Loader\XmlFileLoader;
+use Symfony\Component\DependencyInjection\ParameterBag\EnvPlaceholderParameterBag;
 use Symfony\Component\HttpKernel\Kernel;
 
 #[AsCommand(name: 'lint:container', description: 'Ensure that arguments injected into services match type declarations')]
@@ -94,7 +97,11 @@ final class ContainerLintCommand extends Command
             }, $kernel, $kernel::class);
             $container = $buildContainer();
         } else {
-            $container = unserialize(file_get_contents(substr_replace($file, '.ser', -4)), ['allowed_classes' => true]);
+            if (str_ends_with($file, '.xml') && is_file(substr_replace($file, '.ser', -4))) {
+                $container = unserialize(file_get_contents(substr_replace($file, '.ser', -4)), ['allowed_classes' => true]);
+            } else {
+                (new XmlFileLoader($container = new ContainerBuilder(new EnvPlaceholderParameterBag()), new FileLocator()))->load($file);
+            }
 
             if (!$container instanceof ContainerBuilder) {
                 throw new RuntimeException(\sprintf('This command does not support the application container: "%s" is not a "%s".', get_debug_type($container), ContainerBuilder::class));

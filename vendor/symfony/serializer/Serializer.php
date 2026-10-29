@@ -194,10 +194,6 @@ class Serializer implements SerializerInterface, NormalizerInterface, Denormaliz
             throw new LogicException('Passing a value for "not_normalizable_value_exceptions" context key is not allowed.');
         }
 
-        if (isset($context[DenormalizerInterface::COLLECT_EXTRA_ATTRIBUTES_ERRORS], $context['extra_attributes_exceptions'])) {
-            throw new LogicException('Passing a value for "extra_attributes_exceptions" context key is not allowed.');
-        }
-
         $normalizer = $this->getDenormalizer($data, $type, $format, $context);
 
         // Check for a denormalizer first, e.g. the data is wrapped
@@ -217,40 +213,31 @@ class Serializer implements SerializerInterface, NormalizerInterface, Denormaliz
             throw new NotNormalizableValueException(\sprintf('Could not denormalize object of type "%s", no supporting normalizer found.', $type));
         }
 
-        $collectNotNormalizable = (isset($context[DenormalizerInterface::COLLECT_DENORMALIZATION_ERRORS]) || isset($this->defaultContext[DenormalizerInterface::COLLECT_DENORMALIZATION_ERRORS])) && !isset($context['not_normalizable_value_exceptions']);
-        $collectExtraAttributes = ($context[DenormalizerInterface::COLLECT_EXTRA_ATTRIBUTES_ERRORS] ?? $this->defaultContext[DenormalizerInterface::COLLECT_EXTRA_ATTRIBUTES_ERRORS] ?? false) && !isset($context['extra_attributes_exceptions']);
-
-        $notNormalizableErrors = [];
-        $extraAttributesExceptions = [];
-
-        if ($collectNotNormalizable) {
+        if ((isset($context[DenormalizerInterface::COLLECT_DENORMALIZATION_ERRORS]) || isset($this->defaultContext[DenormalizerInterface::COLLECT_DENORMALIZATION_ERRORS])) && !isset($context['not_normalizable_value_exceptions'])) {
             unset($context[DenormalizerInterface::COLLECT_DENORMALIZATION_ERRORS]);
-            $context['not_normalizable_value_exceptions'] = &$notNormalizableErrors;
-        }
+            $context['not_normalizable_value_exceptions'] = [];
+            $errors = &$context['not_normalizable_value_exceptions'];
+            $denormalized = $normalizer->denormalize($data, $type, $format, $context);
 
-        if ($collectExtraAttributes) {
-            unset($context[DenormalizerInterface::COLLECT_EXTRA_ATTRIBUTES_ERRORS]);
-            $context['extra_attributes_exceptions'] = &$extraAttributesExceptions;
-        }
+            if ($errors) {
+                // merge errors so that one path has only one error
+                $uniqueErrors = [];
+                foreach ($errors as $error) {
+                    if (null === $error->getPath()) {
+                        $uniqueErrors[] = $error;
+                        continue;
+                    }
 
-        $denormalized = $normalizer->denormalize($data, $type, $format, $context);
-
-        if ($notNormalizableErrors || $extraAttributesExceptions) {
-            // merge errors so that one path has only one error
-            $uniqueErrors = [];
-            foreach ($notNormalizableErrors as $error) {
-                if (null === $error->getPath()) {
-                    $uniqueErrors[] = $error;
-                    continue;
+                    $uniqueErrors[$error->getPath()] ??= $error;
                 }
 
-                $uniqueErrors[$error->getPath()] ??= $error;
+                throw new PartialDenormalizationException($denormalized, array_values($uniqueErrors));
             }
 
-            throw new PartialDenormalizationException($denormalized, array_values($uniqueErrors), $extraAttributesExceptions);
+            return $denormalized;
         }
 
-        return $denormalized;
+        return $normalizer->denormalize($data, $type, $format, $context);
     }
 
     public function getSupportedTypes(?string $format): array

@@ -87,7 +87,7 @@ class AttributeLoader implements LoaderInterface
         }
 
         foreach ($reflClass->getProperties() as $property) {
-            if ($property->class === $className) {
+            if ($property->getDeclaringClass()->name === $className) {
                 foreach ($this->getAttributes($property) as $constraint) {
                     if ($constraint instanceof Constraint) {
                         $metadata->addPropertyConstraint($property->name, $constraint);
@@ -99,7 +99,7 @@ class AttributeLoader implements LoaderInterface
         }
 
         foreach ($reflClass->getMethods() as $method) {
-            if ($method->class === $className) {
+            if ($method->getDeclaringClass()->name === $className) {
                 foreach ($this->getAttributes($method) as $constraint) {
                     if ($constraint instanceof Callback) {
                         $constraint->callback = $method->getName();

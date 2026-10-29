@@ -11,6 +11,8 @@
 
 namespace Symfony\Component\HttpClient;
 
+use Psr\Log\LoggerAwareInterface;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpClient\Exception\InvalidArgumentException;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
@@ -22,7 +24,7 @@ use Symfony\Contracts\Service\ResetInterface;
  *
  * @author Anthony Martin <anthony.martin@sensiolabs.com>
  */
-class ScopingHttpClient implements HttpClientInterface, ResetInterface
+class ScopingHttpClient implements HttpClientInterface, ResetInterface, LoggerAwareInterface
 {
     use HttpClientTrait;
 
@@ -97,6 +99,18 @@ class ScopingHttpClient implements HttpClientInterface, ResetInterface
     {
         if ($this->client instanceof ResetInterface) {
             $this->client->reset();
+        }
+    }
+
+    /**
+     * @deprecated since Symfony 7.1, configure the logger on the wrapped HTTP client directly instead
+     */
+    public function setLogger(LoggerInterface $logger): void
+    {
+        trigger_deprecation('symfony/http-client', '7.1', 'Configure the logger on the wrapped HTTP client directly instead.');
+
+        if ($this->client instanceof LoggerAwareInterface) {
+            $this->client->setLogger($logger);
         }
     }
 

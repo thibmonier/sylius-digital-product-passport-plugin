@@ -16,7 +16,6 @@ use Symfony\Component\DependencyInjection\Attribute\AutowireDecorated;
 use Symfony\Component\DependencyInjection\Attribute\Target;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\DependencyInjection\Definition;
-use Symfony\Component\DependencyInjection\Exception\InvalidArgumentException;
 use Symfony\Component\DependencyInjection\TypedReference;
 use Symfony\Contracts\Service\Attribute\Required;
 
@@ -51,13 +50,6 @@ class AutowireRequiredPropertiesPass extends AbstractRecursivePass
             }
             if (\array_key_exists($name = $reflectionProperty->getName(), $properties)) {
                 continue;
-            }
-            if (
-                $reflectionProperty->isPrivateSet()
-                || $reflectionProperty->isProtectedSet()
-                || !$reflectionProperty->isPublic()
-            ) {
-                throw new InvalidArgumentException(\sprintf('Cannot autowire non-public(set) property "%s::$%s" with #[%s].', $reflectionClass->getName(), $reflectionProperty->getName(), Required::class));
             }
 
             $type = $type->getName();

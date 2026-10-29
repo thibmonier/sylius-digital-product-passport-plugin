@@ -8,10 +8,10 @@ use Doctrine\ORM\EntityManagerInterface;
 use Tmonier\SyliusDigitalProductPassportPlugin\Entity\DigitalProductPassport;
 use Tmonier\SyliusDigitalProductPassportPlugin\Entity\PassportRevision;
 
-final class PassportRevisionService implements PassportRevisionServiceInterface
+final readonly class PassportRevisionService implements PassportRevisionServiceInterface
 {
     public function __construct(
-        private readonly EntityManagerInterface $entityManager,
+        private EntityManagerInterface $entityManager,
     ) {
     }
 

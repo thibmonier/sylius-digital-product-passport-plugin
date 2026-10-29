@@ -28,55 +28,15 @@ class DoctrinePingConnectionMiddleware extends AbstractDoctrineMiddleware
     protected function handleForManager(EntityManagerInterface $entityManager, Envelope $envelope, StackInterface $stack): Envelope
     {
         if (null !== $envelope->last(ConsumedByWorkerStamp::class)) {
-            // In multi-EM mode (no explicit entityManagerName), ping every manager and let healthy ones
-            // proceed even if a secondary connection failed. The first failure is rethrown at the end.
-            $firstFailure = null;
-            foreach ($this->getTargetEntityManagers($entityManager) as $name => $targetEntityManager) {
-                try {
-                    $this->pingConnection($targetEntityManager, $name);
-                } catch (DBALException $e) {
-                    if (null !== $this->entityManagerName) {
-                        throw $e;
-                    }
-                    $firstFailure ??= $e;
-                }
-            }
-
-            if (null !== $firstFailure) {
-                throw $firstFailure;
-            }
+            $this->pingConnection($entityManager);
         }
 
         return $stack->next()->handle($envelope, $stack);
     }
 
-    /**
-     * @return iterable<string|null, EntityManagerInterface>
-     */
-    private function getTargetEntityManagers(EntityManagerInterface $entityManager): iterable
-    {
-        if (null !== $this->entityManagerName) {
-            yield $this->entityManagerName => $entityManager;
-
-            return;
-        }
-
-        foreach ($this->managerRegistry->getManagerNames() as $name => $serviceId) {
-            $manager = $this->managerRegistry->getManager($name);
-
-            if ($manager instanceof EntityManagerInterface) {
-                yield $name => $manager;
-            }
-        }
-    }
-
-    private function pingConnection(EntityManagerInterface $entityManager, ?string $entityManagerName = null): void
+    private function pingConnection(EntityManagerInterface $entityManager): void
     {
         $connection = $entityManager->getConnection();
-
-        if (!$connection->isConnected()) {
-            return;
-        }
 
         try {
             $this->executeDummySql($connection);
@@ -87,7 +47,7 @@ class DoctrinePingConnectionMiddleware extends AbstractDoctrineMiddleware
         }
 
         if (!$entityManager->isOpen()) {
-            $this->managerRegistry->resetManager($entityManagerName ?? $this->entityManagerName);
+            $this->managerRegistry->resetManager($this->entityManagerName);
         }
     }
 
