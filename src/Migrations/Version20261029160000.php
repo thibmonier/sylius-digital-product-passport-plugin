@@ -22,7 +22,7 @@ final class Version20261029160000 extends AbstractMigration
         $table->addColumn('passport_id', Types::INTEGER, ['notnull' => true]);
         $table->addColumn('author', Types::STRING, ['length' => 255, 'notnull' => true]);
         $table->addColumn('data', Types::JSON, ['notnull' => true]);
-        $table->addColumn('createdAt', Types::DATETIME_IMMUTABLE, ['notnull' => true]);
+        $table->addColumn('created_at', Types::DATETIME_IMMUTABLE, ['notnull' => true]);
 
         $table->setPrimaryKey(['id']);
         $table->addIndex(['passport_id']);

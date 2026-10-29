@@ -20,13 +20,13 @@ class PassportRevision
     #[ORM\JoinColumn(name: 'passport_id', referencedColumnName: 'id', nullable: false, onDelete: 'CASCADE')]
     private DigitalProductPassport $passport;
 
-    #[ORM\Column(type: Types::STRING, length: 255, nullable: false)]
+    #[ORM\Column(name: 'author', type: Types::STRING, length: 255, nullable: false)]
     private string $author;
 
-    #[ORM\Column(type: Types::JSON, nullable: false)]
+    #[ORM\Column(name: 'data', type: Types::JSON, nullable: false)]
     private array $data = [];
 
-    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: false)]
+    #[ORM\Column(name: 'created_at', type: Types::DATETIME_IMMUTABLE, nullable: false)]
     private \DateTimeImmutable $createdAt;
 
     public function __construct()
