@@ -35,7 +35,7 @@ final class Version20261029150000 extends AbstractMigration
             'sylius_product_variant',
             ['product_variant_id'],
             ['id'],
-            ['onDelete' => 'CASCADE']
+            ['onDelete' => 'CASCADE'],
         );
     }
 

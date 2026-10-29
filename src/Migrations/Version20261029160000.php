@@ -30,7 +30,7 @@ final class Version20261029160000 extends AbstractMigration
             'tmonier_digital_product_passport',
             ['passport_id'],
             ['id'],
-            ['onDelete' => 'CASCADE']
+            ['onDelete' => 'CASCADE'],
         );
     }
 
