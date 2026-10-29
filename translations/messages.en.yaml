@@ -1,0 +1,10 @@
+tmonier_digital_product_passport:
+    ui:
+        product_passport: 'Product Passport'
+        product_identifier: 'Product Identifier'
+        origin: 'Origin'
+        recyclability: 'Recyclability'
+        repairability: 'Repairability'
+        version: 'Schema Version'
+        last_update: 'Last Update'
+        disclaimer: 'This passport provides preparatory sustainability data. It does not constitute a promise of regulatory compliance.'

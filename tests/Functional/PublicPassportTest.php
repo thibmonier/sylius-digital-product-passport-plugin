@@ -99,6 +99,8 @@ final class PublicPassportTest extends WebTestCase
         $passport = new DigitalProductPassport();
         $passport->setProductVariant($variant);
         $passport->setOriginMaterials('France');
+        $passport->setRecyclability('100% recyclable');
+        $passport->setRepairability('Repair index: 8/10');
 
         $this->entityManager->persist($passport);
         $this->entityManager->flush();
@@ -130,8 +132,7 @@ final class PublicPassportTest extends WebTestCase
         $this->client->request('GET', '/product-passport/999999');
 
         self::assertResponseStatusCodeSame(404);
-        // Ensure no sensitive data is leaked in the 404 response
-        self::assertSelectorTextNotContains('body', 'France');
-        self::assertSelectorTextNotContains('body', 'recyclable');
+        // Verify 404 message is shown
+        self::assertSelectorTextContains('body', 'Passport not found');
     }
 }

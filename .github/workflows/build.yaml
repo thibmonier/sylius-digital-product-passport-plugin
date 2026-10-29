@@ -121,7 +121,7 @@ jobs:
 
             -
                 name: Lint YAML
-                run: vendor/bin/console lint:yaml config tests/TestApplication/config --parse-tags
+                run: vendor/bin/console lint:yaml config translations tests/TestApplication/config --parse-tags
 
             -
                 name: Validate Doctrine mapping
