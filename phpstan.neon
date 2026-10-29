@@ -1,0 +1,13 @@
+parameters:
+    level: max
+    reportUnmatchedIgnoredErrors: false
+    paths:
+        - src
+        - tests/Integration
+
+    excludePaths:
+        - 'tests/TestApplication/src/**.php'
+
+    ignoreErrors:
+        -
+            identifier: missingType.iterableValue

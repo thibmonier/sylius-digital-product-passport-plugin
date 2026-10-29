@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<phpunit
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+    colors="true"
+    bootstrap="vendor/sylius/test-application/config/bootstrap.php"
+    defaultTestSuite="all"
+>
+    <php>
+        <server name="KERNEL_CLASS" value="Sylius\TestApplication\Kernel" />
+        <server name="IS_DOCTRINE_ORM_SUPPORTED" value="true"/>
+
+        <env name="APP_SECRET" value="''" />
+        <env name="APP_ENV" value="test"/>
+
+        <server name="SYLIUS_TEST_APP_BUNDLES_PATH" value="tests/TestApplication/config/bundles.php"/>
+        <server name="SYLIUS_TEST_APP_CONFIGS_TO_IMPORT" value="@TmonierSyliusDigitalProductPassportPlugin/tests/TestApplication/config/config.yaml"/>
+        <server name="SYLIUS_TEST_APP_ROUTES_TO_IMPORT" value="@TmonierSyliusDigitalProductPassportPlugin/tests/TestApplication/config/routes.yaml"/>
+        <env name="DATABASE_URL" value="mysql://root:root@127.0.0.1/tmonier_sylius_digital_product_passport_%kernel.environment%"/>
+    </php>
+
+    <testsuites>
+        <testsuite name="all">
+            <directory>tests/Integration</directory>
+        </testsuite>
+
+        <testsuite name="integration">
+            <directory>tests/Integration</directory>
+        </testsuite>
+    </testsuites>
+</phpunit>

@@ -1,0 +1,3 @@
+imports:
+    - { resource: "@TmonierSyliusDigitalProductPassportPlugin/config/config.yaml" }
+    - { resource: "services.php" }

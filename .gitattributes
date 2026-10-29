@@ -1,0 +1,9 @@
+/.github export-ignore
+/CLAUDE.md export-ignore
+/docs export-ignore
+/ecs.php export-ignore
+/Makefile export-ignore
+/phpstan.neon export-ignore
+/phpunit.xml.dist export-ignore
+/rector.php export-ignore
+/tests export-ignore
