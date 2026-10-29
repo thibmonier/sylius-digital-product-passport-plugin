@@ -1,0 +1,91 @@
+{
+    "name": "sylius/mailer-bundle",
+    "type": "symfony-bundle",
+    "description": "Mailers and e-mail template management for Symfony projects.",
+    "keywords": [
+        "mailer",
+        "email",
+        "symfony"
+    ],
+    "homepage": "https://sylius.com",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Paweł Jędrzejewski",
+            "homepage": "https://pjedrzejewski.com"
+        },
+        {
+            "name": "Sylius project",
+            "homepage": "https://sylius.com"
+        },
+        {
+            "name": "Community contributions",
+            "homepage": "https://github.com/Sylius/Sylius/contributors"
+        }
+    ],
+    "require": {
+        "php": "^8.2",
+        "symfony/config": "^6.4 || ^7.4 || ^8.0",
+        "symfony/event-dispatcher-contracts": "^3.0",
+        "symfony/dependency-injection": "^6.4 || ^7.4 || ^8.0",
+        "symfony/framework-bundle": "^6.4 || ^7.4 || ^8.0",
+        "symfony/http-kernel": "^6.4 || ^7.4 || ^8.0",
+        "twig/twig": "^3.3",
+        "webmozart/assert": "^1.9"
+    },
+    "replace": {
+        "sylius/mailer": "self.version"
+    },
+    "require-dev": {
+        "matthiasnoback/symfony-dependency-injection-test": "^6.0",
+        "phpstan/phpstan": "1.12.5",
+        "phpstan/phpstan-phpunit": "1.4.0",
+        "phpstan/phpstan-webmozart-assert": "1.2.11",
+        "phpunit/phpunit": "^11.5",
+        "sylius-labs/coding-standard": "^4.0",
+        "symfony/console": "^6.4 || ^7.4 || ^8.0",
+        "symfony/dotenv": "^6.4 || ^7.4 || ^8.0",
+        "symfony/event-dispatcher": "^6.4 || ^7.4 || ^8.0",
+        "symfony/mailer": "^6.4 || ^7.4 || ^8.0",
+        "symfony/twig-bundle": "^6.4 || ^7.4 || ^8.0"
+    },
+    "suggest": {
+        "symfony/translation": "To use the translation features for testing purposes"
+    },
+    "extra": {
+        "branch-alias": {
+            "dev-master": "1.8-dev"
+        }
+    },
+    "config": {
+        "allow-plugins": {
+            "symfony/flex": true,
+            "dealerdirect/phpcodesniffer-composer-installer": false
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Sylius\\Bundle\\MailerBundle\\": "src/Bundle/",
+            "Sylius\\Component\\Mailer\\": "src/Component/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Sylius\\Bundle\\MailerBundle\\Tests\\": "tests/",
+            "App\\": "tests/Application/"
+        }
+    },
+    "scripts": {
+        "analyse": [
+            "@composer validate --strict",
+            "vendor/bin/ecs check src",
+            "vendor/bin/phpstan analyse --ansi -c phpstan.neon -l max src"
+        ],
+        "fix": [
+            "vendor/bin/ecs check src --fix"
+        ],
+        "test": [
+            "vendor/bin/phpunit --colors=always"
+        ]
+    }
+}

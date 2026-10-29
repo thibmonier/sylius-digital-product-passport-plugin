@@ -1,0 +1,35 @@
+{
+    "name": "sylius/test-application",
+    "license": "MIT",
+    "require": {
+        "php": "^8.3",
+        "sylius/sylius": "~2.3.0@alpha",
+        "symfony/debug-bundle": "*",
+        "symfony/dotenv": "*",
+        "symfony/flex": "*",
+        "symfony/runtime": "*",
+        "symfony/web-profiler-bundle": "*",
+        "theofidry/alice-data-fixtures": "*"
+    },
+    "bin": [
+        "bin/console"
+    ],
+    "config": {
+        "allow-plugins": {
+            "php-http/discovery": false,
+            "symfony/flex": true,
+            "symfony/runtime": true
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Sylius\\TestApplication\\": "src/"
+        }
+    },
+    "scripts": {
+        "auto-scripts": {
+            "cache:clear": "symfony-cmd",
+            "assets:install %PUBLIC_DIR%": "symfony-cmd"
+        }
+    }
+}

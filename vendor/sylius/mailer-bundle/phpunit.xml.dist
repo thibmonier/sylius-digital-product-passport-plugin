@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="http://schema.phpunit.de/11.5/phpunit.xsd"
+         colors="true"
+         bootstrap="tests/Application/config/bootstrap.php"
+         defaultTestSuite="SyliusMailerBundle Test Suite"
+>
+    <php>
+        <server name="KERNEL_CLASS" value="App\Kernel" />
+    </php>
+
+    <testsuites>
+        <testsuite name="SyliusMailerBundle Test Suite">
+            <directory>./tests/</directory>
+            <exclude>./tests/Integration/</exclude>
+            <exclude>./tests/Application/</exclude>
+        </testsuite>
+        <testsuite name="SyliusMailerBundle Integration Test Suite">
+            <directory>./tests/Integration/</directory>
+        </testsuite>
+    </testsuites>
+</phpunit>

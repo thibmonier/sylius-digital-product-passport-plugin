@@ -1,0 +1,181 @@
+<?php
+
+/*
+ * This file is part of the Symfony package.
+ *
+ * (c) Fabien Potencier <fabien@symfony.com>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+
+namespace Symfony\UX\Autocomplete\Form;
+
+use Doctrine\ORM\EntityRepository;
+use Doctrine\ORM\QueryBuilder;
+use Symfony\Component\Form\ChoiceList\Factory\Cache\ChoiceLabel;
+use Symfony\Component\Form\FormFactoryInterface;
+use Symfony\Component\Form\FormInterface;
+use Symfony\Component\PropertyAccess\PropertyAccessorInterface;
+use Symfony\Component\PropertyAccess\PropertyPathInterface;
+use Symfony\Contracts\Service\ResetInterface;
+use Symfony\UX\Autocomplete\Doctrine\EntityMetadata;
+use Symfony\UX\Autocomplete\Doctrine\EntityMetadataFactory;
+use Symfony\UX\Autocomplete\Doctrine\EntitySearchUtil;
+use Symfony\UX\Autocomplete\OptionsAwareEntityAutocompleterInterface;
+
+/**
+ * An entity auto-completer that wraps a form type to get its information.
+ *
+ * @internal
+ */
+final class WrappedEntityTypeAutocompleter implements OptionsAwareEntityAutocompleterInterface, ResetInterface
+{
+    use WrappedAutocompleterTrait;
+
+    private ?FormInterface $form = null;
+    private ?EntityMetadata $entityMetadata = null;
+    private array $options = [];
+
+    public function __construct(
+        private string $formType,
+        private FormFactoryInterface $formFactory,
+        private EntityMetadataFactory $metadataFactory,
+        private PropertyAccessorInterface $propertyAccessor,
+        private EntitySearchUtil $entitySearchUtil,
+    ) {
+    }
+
+    public function getEntityClass(): string
+    {
+        return $this->getFormOption('class');
+    }
+
+    public function createFilteredQueryBuilder(EntityRepository $repository, string $query): QueryBuilder
+    {
+        $queryBuilder = $this->getFormOption('query_builder');
+        $queryBuilder = $queryBuilder ?: $repository->createQueryBuilder('entity');
+
+        if ($filterQuery = $this->getFilterQuery()) {
+            $filterQuery($queryBuilder, $query, $repository);
+
+            return $queryBuilder;
+        }
+
+        // Applying max result limit or not
+        $queryBuilder->setMaxResults($this->getMaxResults());
+
+        // avoid filtering if there is no query
+        if (!$query) {
+            return $queryBuilder;
+        }
+
+        $this->entitySearchUtil->addSearchClause(
+            $queryBuilder,
+            $query,
+            $this->getEntityClass(),
+            $this->getSearchableFields()
+        );
+
+        return $queryBuilder;
+    }
+
+    public function getLabel(object $entity): string
+    {
+        $choiceLabel = $this->getFormOption('choice_label');
+
+        if (null === $choiceLabel) {
+            return (string) $entity;
+        }
+
+        if (\is_string($choiceLabel) || $choiceLabel instanceof PropertyPathInterface) {
+            return $this->propertyAccessor->getValue($entity, $choiceLabel);
+        }
+
+        if ($choiceLabel instanceof ChoiceLabel) {
+            $choiceLabel = $choiceLabel->getOption();
+        }
+
+        // 0 hardcoded as the "index", should not be relevant
+        return $choiceLabel($entity, 0, $this->getValue($entity));
+    }
+
+    public function getValue(object $entity): string
+    {
+        $choiceValue = $this->getFormOption('choice_value');
+
+        if (\is_string($choiceValue) || $choiceValue instanceof PropertyPathInterface) {
+            return $this->propertyAccessor->getValue($entity, $choiceValue);
+        }
+
+        if ($choiceValue instanceof \Closure) {
+            return $choiceValue($entity);
+        }
+
+        return $this->getEntityMetadata()->getIdValue($entity);
+    }
+
+    public function getGroupBy(): mixed
+    {
+        return $this->getFormOption('group_by');
+    }
+
+    public function getAttributes(object $entity): array
+    {
+        $attributesOption = $this->getFormOption('additional_attributes');
+
+        if (null === $attributesOption) {
+            return [];
+        }
+
+        if (\is_array($attributesOption)) {
+            return $attributesOption;
+        }
+
+        if (\is_callable($attributesOption)) {
+            return $attributesOption($entity);
+        }
+
+        throw new \InvalidArgumentException('The "additional_attributes" option must be either an array or a callable.');
+    }
+
+    public function getTranslationDomain(): string|false|null
+    {
+        // the "choice_translation_domain" option is normalized to the form
+        // "translation_domain" when it is true, and to false when translation
+        // is disabled
+        return $this->getFormOption('choice_translation_domain');
+    }
+
+    private function getFormOption(string $name): mixed
+    {
+        $form = $this->getForm();
+        $formOptions = $form->getConfig()->getOptions();
+
+        return $formOptions[$name] ?? null;
+    }
+
+    private function getSearchableFields(): ?array
+    {
+        return $this->getForm()->getConfig()->getOption('searchable_fields');
+    }
+
+    private function getFilterQuery(): ?callable
+    {
+        return $this->getForm()->getConfig()->getOption('filter_query');
+    }
+
+    private function getMaxResults(): ?int
+    {
+        return $this->getForm()->getConfig()->getOption('max_results');
+    }
+
+    private function getEntityMetadata(): EntityMetadata
+    {
+        if (null === $this->entityMetadata) {
+            $this->entityMetadata = $this->metadataFactory->create($this->getEntityClass());
+        }
+
+        return $this->entityMetadata;
+    }
+}
