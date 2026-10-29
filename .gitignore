@@ -16,6 +16,8 @@
 /.php-version
 /php.ini
 
+/tests/TestApplication/.env
+/tests/TestApplication/.env.test
 /tests/TestApplication/.env.local
 /tests/TestApplication/.env.*.local
 .DS_Store
