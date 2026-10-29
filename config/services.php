@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Symfony\Component\DependencyInjection\Loader\Configurator;
 
+use Tmonier\SyliusDigitalProductPassportPlugin\Service\PassportRevisionService;
+use Tmonier\SyliusDigitalProductPassportPlugin\Service\PassportRevisionServiceInterface;
+
 return static function (ContainerConfigurator $containerConfigurator): void {
     $services = $containerConfigurator->services();
     $services->defaults()
@@ -17,4 +20,9 @@ return static function (ContainerConfigurator $containerConfigurator): void {
             __DIR__ . '/../src/Entity',
             __DIR__ . '/../src/Migrations',
         ]);
+
+    $services->set('tmonier_digital_product_passport.revision_service', PassportRevisionService::class)
+        ->public()
+        ->alias(PassportRevisionServiceInterface::class, 'tmonier_digital_product_passport.revision_service')
+        ->public();
 };
