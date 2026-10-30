@@ -27,19 +27,17 @@ final class QrGenerator
      */
     public function generateSvg(string $link): string
     {
-        $builder = new Builder(
-            writer: new SvgWriter(),
-            writerOptions: [],
-            validateResult: false,
-            data: $link,
-            encoding: new Encoding('UTF-8'),
-            errorCorrectionLevel: ErrorCorrectionLevel::High,
-            size: 300,
-            margin: 10,
-            roundBlockSizeMode: RoundBlockSizeMode::Margin,
-        );
-
-        $result = $builder->build();
+        $result = Builder::create()
+            ->writer(new SvgWriter())
+            ->writerOptions([])
+            ->data($link)
+            ->encoding(new Encoding('UTF-8'))
+            ->errorCorrectionLevel(ErrorCorrectionLevel::High)
+            ->size(300)
+            ->margin(10)
+            ->roundBlockSizeMode(RoundBlockSizeMode::Margin)
+            ->validateResult(false)
+            ->build();
 
         return $result->getString();
     }
@@ -53,19 +51,17 @@ final class QrGenerator
      */
     public function generatePng(string $link): string
     {
-        $builder = new Builder(
-            writer: new PngWriter(),
-            writerOptions: [],
-            validateResult: false,
-            data: $link,
-            encoding: new Encoding('UTF-8'),
-            errorCorrectionLevel: ErrorCorrectionLevel::High,
-            size: 300,
-            margin: 10,
-            roundBlockSizeMode: RoundBlockSizeMode::Margin,
-        );
-
-        $result = $builder->build();
+        $result = Builder::create()
+            ->writer(new PngWriter())
+            ->writerOptions([])
+            ->data($link)
+            ->encoding(new Encoding('UTF-8'))
+            ->errorCorrectionLevel(ErrorCorrectionLevel::High)
+            ->size(300)
+            ->margin(10)
+            ->roundBlockSizeMode(RoundBlockSizeMode::Margin)
+            ->validateResult(false)
+            ->build();
 
         return $result->getString();
     }
