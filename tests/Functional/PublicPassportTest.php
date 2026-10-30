@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Tmonier\SyliusDigitalProductPassportPlugin\Functional;
 
 use Doctrine\ORM\EntityManagerInterface;
+use Sylius\Component\Core\Model\ChannelPricing;
 use Sylius\Component\Core\Model\Product;
 use Sylius\Component\Core\Model\ProductVariant;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
@@ -45,11 +46,20 @@ final class PublicPassportTest extends WebTestCase
 
         $variant = new ProductVariant();
         $variant->setCode('test-variant-' . uniqid());
+        $variant->setCurrentLocale('en_US');
+        $variant->setFallbackLocale('en_US');
+        $variant->setName('Test Variant');
         $variant->setProduct($product);
+
+        $channelPricing = new ChannelPricing();
+        $channelPricing->setChannelCode($channel->getCode());
+        $channelPricing->setPrice(1000);
+        $variant->addChannelPricing($channelPricing);
 
         $this->entityManager->persist($product);
         $this->entityManager->persist($variant);
         $this->entityManager->flush();
+        $this->entityManager->clear();
 
         return $variant;
     }
