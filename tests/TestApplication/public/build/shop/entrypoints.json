@@ -1,0 +1,8 @@
+{
+    "entrypoints": {
+        "shop": {
+            "js": [],
+            "css": []
+        }
+    }
+}
