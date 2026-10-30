@@ -38,6 +38,7 @@ final class ProductLabelsTabTest extends WebTestCase
         $adminUser->setEmail('admin_test_' . uniqid() . '@example.com');
         $adminUser->setPlainPassword('password123');
         $adminUser->setEnabled(true);
+        $adminUser->setLocaleCode('en_US');
 
         $this->entityManager->persist($adminUser);
         $this->entityManager->flush();
