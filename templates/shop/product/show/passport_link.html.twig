@@ -1,3 +1,4 @@
+{% set product = hookable_metadata.context.product %}
 {% set passport = get_product_passport(product) %}
 
 {% if passport is not null %}
