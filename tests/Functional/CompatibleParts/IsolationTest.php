@@ -98,6 +98,10 @@ final class IsolationTest extends WebTestCase
 
         $this->entityManager->persist($passport);
 
+        // Given: Part from Acme's fleet (should be displayed to Claire)
+        $acmePartCode = 'acme-part-' . uniqid();
+        $acmePart = $this->createProductVariant($acmePartCode, 'Acme Part');
+
         // Given: Part from other company's fleet (should NOT be displayed to Claire)
         $otherPartCode = 'other-company-part-' . uniqid();
         $otherPart = $this->createProductVariant($otherPartCode, 'Other Company Part');
@@ -116,7 +120,11 @@ final class IsolationTest extends WebTestCase
         $content = $response->getContent();
         self::assertIsString($content);
 
-        // Then: aucune donnée de l'autre parc n'apparaît
+        // Then: Acme's part IS displayed
+        self::assertStringContainsString('Acme Part', $content);
+        self::assertStringContainsString($acmePartCode, $content);
+
+        // Then: Other company's part is NOT displayed (isolation)
         self::assertStringNotContainsString('Other Company Part', $content);
         self::assertStringNotContainsString($otherPartCode, $content);
     }
