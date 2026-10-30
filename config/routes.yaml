@@ -1,0 +1,4 @@
+# Plugin routes (loaded in tests/TestApplication/config/routes.yaml if needed)
+
+tmonier_sylius_digital_product_passport_plugin_shop:
+    resource: '@TmonierSyliusDigitalProductPassportPlugin/config/routes/shop.yaml'

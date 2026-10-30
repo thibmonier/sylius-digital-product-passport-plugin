@@ -1,0 +1,50 @@
+{% extends '@SyliusShop/shared/layout/base.html.twig' %}
+
+{% block metatags %}
+    {{ parent() }}
+    <meta name="robots" content="noindex">
+{% endblock %}
+
+{% block title %}
+    {{ 'tmonier_digital_product_passport.ui.product_passport'|trans }} - {{ parent() }}
+{% endblock %}
+
+{% block content %}
+    <div class="container my-5">
+        <h1>{{ 'tmonier_digital_product_passport.ui.product_passport'|trans }}</h1>
+
+        <dl class="row mt-4">
+            {% if passport.productIdentifier %}
+                <dt class="col-sm-4">{{ 'tmonier_digital_product_passport.ui.product_identifier'|trans }}</dt>
+                <dd class="col-sm-8">{{ passport.productIdentifier }}</dd>
+            {% endif %}
+
+            {% if passport.originMaterials %}
+                <dt class="col-sm-4">{{ 'tmonier_digital_product_passport.ui.origin'|trans }}</dt>
+                <dd class="col-sm-8">{{ passport.originMaterials }}</dd>
+            {% endif %}
+
+            {% if passport.recyclability %}
+                <dt class="col-sm-4">{{ 'tmonier_digital_product_passport.ui.recyclability'|trans }}</dt>
+                <dd class="col-sm-8">{{ passport.recyclability }}</dd>
+            {% endif %}
+
+            {% if passport.repairability %}
+                <dt class="col-sm-4">{{ 'tmonier_digital_product_passport.ui.repairability'|trans }}</dt>
+                <dd class="col-sm-8">{{ passport.repairability }}</dd>
+            {% endif %}
+
+            <dt class="col-sm-4">{{ 'tmonier_digital_product_passport.ui.version'|trans }}</dt>
+            <dd class="col-sm-8">Version {{ passport.version }}</dd>
+
+            <dt class="col-sm-4">{{ 'tmonier_digital_product_passport.ui.last_update'|trans }}</dt>
+            <dd class="col-sm-8" data-test="passport-updated-at">
+                {{ passport.updatedAt|date('Y-m-d H:i:s') }}
+            </dd>
+        </dl>
+
+        <div class="alert alert-info mt-4">
+            <p class="mb-0">{{ 'tmonier_digital_product_passport.ui.disclaimer'|trans }}</p>
+        </div>
+    </div>
+{% endblock %}

@@ -1,0 +1,7 @@
+tmonier_digital_product_passport_show:
+    path: /product-passport/{id}
+    methods: [GET]
+    defaults:
+        _controller: Tmonier\SyliusDigitalProductPassportPlugin\Controller\Shop\PassportController::show
+    requirements:
+        id: \d+
