@@ -14,8 +14,10 @@ Modèle de données de durabilité ouvert et versionné pour les produits Sylius
 - **Page publique du passeport** : `/product-passport/{id}`, lisible sans compte, en français et en anglais, avec les données, la version du passeport et la date de dernière mise à jour. Un passeport sans aucune donnée renseignée est considéré comme non publié et renvoie une 404.
 - **Lien depuis la fiche produit** : un lien « Passeport Produit » dans le résumé de la fiche produit de la boutique, par le hook Twig `sylius_shop.product.show.content.info.summary`.
 - **Export JSON** : `DigitalProductPassport::toJson()` renvoie le passeport avec la version de son schéma (`schemaVersion`).
+- **GS1 Digital Link et QR code** : quand l'identifiant produit du passeport est un GTIN valide (8, 12, 13 ou 14 chiffres, clé de contrôle vérifiée), la page d'édition d'un produit en administration affiche un onglet « Étiquettes » avec le lien GS1 Digital Link (`https://id.gs1.org/01/{GTIN}`) et son QR code (SVG). Un GTIN invalide est signalé dans l'onglet.
+- **Pièces détachées compatibles** (optionnel) : quand [`tmonier/sylius-customer-asset-management-plugin`](https://github.com/thibmonier/sylius-customer-asset-management-plugin) est installé et que le passeport porte un code de modèle d'équipement, la page publique liste les variantes compatibles avec ce modèle, avec un lien vers leur fiche ; un produit désactivé est listé comme indisponible, sans lien. Sans ce plugin, le bloc n'est pas affiché.
 
-Prévu dans des versions ultérieures : une interface d'administration des passeports, d'autres champs de données, GS1 Digital Link et les QR codes.
+Prévu dans des versions ultérieures : une interface d'administration des passeports, le téléchargement du QR code en SVG et PNG, d'autres champs de données.
 
 ## Installation
 
@@ -47,7 +49,7 @@ bin/console doctrine:migrations:migrate
 
 ## Utilisation
 
-La version 0.1.0 n'a pas encore d'écran d'administration : les passeports se créent par le code (fixtures, import ou commande de votre choix), par exemple :
+Il n'y a pas encore d'écran d'administration des passeports : ils se créent par le code (fixtures, import ou commande de votre choix), par exemple :
 
 ```php
 $passport = new DigitalProductPassport();
@@ -55,6 +57,8 @@ $passport->setProductVariant($variant);
 $passport->setOriginMaterials('France, Allemagne');
 $passport->setRecyclability('100 % recyclable');
 $passport->setRepairability('Indice de réparabilité : 8/10');
+$passport->setProductIdentifier('01234567890128'); // GTIN, utilisé pour le lien GS1 Digital Link
+$passport->setEquipmentModelCode('FORKLIFT_X'); // optionnel, modèle d'équipement de customer-asset-management
 $entityManager->persist($passport);
 $entityManager->flush();
 ```

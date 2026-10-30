@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-30
+
+### Added
+- GTIN validation (8, 12, 13 and 14 digits, check digit) and GS1 Digital Link generation (US-232)
+- QR code of the GS1 Digital Link (endroid/qr-code ^5) and "Labels" tab in the admin product edit page (US-232)
+- Optional equipment model code on the passport (migration) and compatible spare parts block on the public page when customer-asset-management is installed (US-233)
+- Screenshots of the public page in the README (US-241)
+
 ## [0.1.0] - 2026-10-30
 
 ### Added
