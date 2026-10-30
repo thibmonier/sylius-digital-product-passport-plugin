@@ -63,7 +63,11 @@ La fiche produit renvoie alors vers la page publique `/product-passport/{id}`.
 
 ## Captures d'écran
 
-Les captures de la page publique seront ajoutées une fois le plugin installé dans la [démo Sylius B2B](https://sylius-b2b.thibaut-monier.fr/fr_FR/plugins).
+Page publique du passeport produit, telle qu'affichée dans la [démo Sylius B2B](https://sylius-b2b.thibaut-monier.fr/fr_FR/plugins). Les intitulés suivent la langue de la boutique ; les valeurs des champs sont affichées telles que saisies.
+
+![Page publique du passeport produit (français)](docs/public-page-fr.png)
+
+![Page publique du passeport produit (anglais)](docs/public-page-en.png)
 
 ## Prérequis
 
