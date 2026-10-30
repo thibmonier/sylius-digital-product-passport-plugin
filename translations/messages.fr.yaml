@@ -8,6 +8,8 @@ tmonier_digital_product_passport:
         version: 'Version du schéma'
         last_update: 'Dernière mise à jour'
         disclaimer: 'Ce passeport fournit des données de durabilité préparatoires. Il ne constitue pas une promesse de conformité réglementaire.'
+        compatible_parts: 'Pièces détachées compatibles'
+        unavailable: 'indisponible'
 
 tmonier_sylius_digital_product_passport:
     admin:

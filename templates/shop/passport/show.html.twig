@@ -43,6 +43,27 @@
             </dd>
         </dl>
 
+        {% if compatibleParts is not empty %}
+            <div class="mt-5">
+                <h2>{{ 'tmonier_digital_product_passport.ui.compatible_parts'|trans }}</h2>
+                <ul class="list-group mt-3">
+                    {% for variant in compatibleParts %}
+                        <li class="list-group-item">
+                            {% set product = variant.product %}
+                            {% if product.enabled %}
+                                <a href="{{ path('sylius_shop_product_show', {'slug': product.slug, '_locale': app.request.locale}) }}">
+                                    {{ variant.name }}
+                                </a>
+                                <span class="text-muted">({{ product.code }})</span>
+                            {% else %}
+                                <span class="text-muted">{{ variant.name }} - {{ 'tmonier_digital_product_passport.ui.unavailable'|trans }}</span>
+                            {% endif %}
+                        </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
+
         <div class="alert alert-info mt-4">
             <p class="mb-0">{{ 'tmonier_digital_product_passport.ui.disclaimer'|trans }}</p>
         </div>

@@ -8,6 +8,8 @@ tmonier_digital_product_passport:
         version: 'Schema Version'
         last_update: 'Last Update'
         disclaimer: 'This passport provides preparatory sustainability data. It does not constitute a promise of regulatory compliance.'
+        compatible_parts: 'Compatible Spare Parts'
+        unavailable: 'unavailable'
 
 tmonier_sylius_digital_product_passport:
     admin:
