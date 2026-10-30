@@ -16,6 +16,7 @@ Open and versioned sustainability data model for Sylius 2 products: origin, recy
 - **JSON export**: `DigitalProductPassport::toJson()` returns the passport with its schema version (`schemaVersion`).
 - **GS1 Digital Link and QR code**: when the passport product identifier is a valid GTIN (8, 12, 13 or 14 digits, check digit verified), the admin product edit page shows a "Labels" tab with the GS1 Digital Link (`https://id.gs1.org/01/{GTIN}`) and its QR code (SVG). An invalid GTIN is reported in the tab.
 - **Compatible spare parts** (optional): when [`tmonier/sylius-customer-asset-management-plugin`](https://github.com/thibmonier/sylius-customer-asset-management-plugin) is installed and the passport has an equipment model code, the public page lists the variants compatible with that equipment model, with a link to their product page; a disabled product is listed as unavailable, without link. Without that plugin, the block is not shown.
+- **Passport on the machine page** (optional, customer-asset-management ^0.2.1): on the page of a machine of the customer's fleet, a block links to the published passport of its equipment model (same equipment model code) and lists its compatible spare parts. A model without a published passport shows no block.
 
 Planned for later versions: an admin interface to edit passports, SVG and PNG download of the QR code, more data fields.
 
