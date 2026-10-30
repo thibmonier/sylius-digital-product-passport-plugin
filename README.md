@@ -10,16 +10,12 @@ Open and versioned sustainability data model for Sylius 2 products: origin, recy
 
 ## Features
 
-- **Versioned data model**: open schema with version tracking and revision history
-- **Sustainability data**: origin of materials, composition, recyclability, repairability index and instructions, warranty, spare parts references
-- **Public passport page**: accessible without login, shows all sustainability information
-- **Admin interface**: Symfony forms to create and edit product passports
-- **Export**: JSON export with versioned schema
-- **GS1 Digital Link** (coming in v1.1): GTIN-14 support and QR code generation
+- **Versioned data model**: a passport per product variant (product identifier, origin of materials, recyclability, repairability), with a version number and a revision history (`PassportRevision`, recorded by `PassportRevisionService`).
+- **Public passport page**: `/product-passport/{id}`, readable without an account, in English and French, showing the data, the passport version and the date of the last update. A passport with no data filled in is treated as unpublished and returns a 404.
+- **Link from the product page**: a "Product Passport" link in the product summary of the shop, through the `sylius_shop.product.show.content.info.summary` Twig hook.
+- **JSON export**: `DigitalProductPassport::toJson()` returns the passport with its schema version (`schemaVersion`).
 
-## Demo
-
-See the plugin in action: [sylius-b2b.thibaut-monier.fr](https://sylius-b2b.thibaut-monier.fr/en_US/plugins)
+Planned for later versions: an admin interface to edit passports, more data fields, GS1 Digital Link and QR codes.
 
 ## Installation
 
@@ -36,7 +32,14 @@ return [
 ];
 ```
 
-Run migrations:
+Import the routes, for example in `config/routes/tmonier_digital_product_passport.yaml`:
+
+```yaml
+tmonier_digital_product_passport:
+    resource: '@TmonierSyliusDigitalProductPassportPlugin/config/routes.yaml'
+```
+
+Run the migrations:
 
 ```bash
 bin/console doctrine:migrations:migrate
@@ -44,33 +47,29 @@ bin/console doctrine:migrations:migrate
 
 ## Usage
 
-### Admin
+Version 0.1.0 has no admin screen yet: passports are created in code (fixtures, import or a command of your own), for example:
 
-Go to **Products > Product Passports** to create and edit passports for your products.
+```php
+$passport = new DigitalProductPassport();
+$passport->setProductVariant($variant);
+$passport->setOriginMaterials('France, Germany');
+$passport->setRecyclability('100% recyclable');
+$passport->setRepairability('Repairability index: 8/10');
+$entityManager->persist($passport);
+$entityManager->flush();
+```
 
-### Public Page
-
-Each product with a passport has a public page at `/product-passport/{id}` showing:
-- Origin of materials
-- Recyclability information
-- Repairability index and instructions
-- Warranty details
-- Compatible spare parts (if available)
-- Schema version and last revision date
+The product page then links to the public page `/product-passport/{id}`.
 
 ## Screenshots
 
-### Admin Form
-*(Coming soon with US-231)*
-
-### Public Passport Page
-*(Coming soon with US-231)*
+Screenshots of the public page will be added once the plugin is installed in the [Sylius B2B demo](https://sylius-b2b.thibaut-monier.fr/en_US/plugins).
 
 ## Requirements
 
 - PHP 8.2 or higher
 - Sylius 2.2.9+ or 2.3+
-- Symfony 6.4+, 7.4+, or 8.0+
+- Symfony 7.4 or 8.0 (tested in CI)
 
 ## Development
 
@@ -100,6 +99,5 @@ MIT License. See [LICENSE](LICENSE) for details.
 
 ## Links
 
-- [Demo](https://sylius-b2b.thibaut-monier.fr/en_US/plugins)
 - [ESPR Regulation](https://eur-lex.europa.eu/eli/reg/2024/1781/oj?locale=en)
 - [Digital Product Passport Registry](https://single-market-economy.ec.europa.eu/single-market/digital-product-passport_en)
