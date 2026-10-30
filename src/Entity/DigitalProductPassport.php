@@ -36,6 +36,9 @@ class DigitalProductPassport
     #[ORM\Column(name: 'repairability', type: Types::TEXT, nullable: true)]
     private ?string $repairability = null;
 
+    #[ORM\Column(name: 'equipment_model_code', type: Types::STRING, length: 64, nullable: true)]
+    private ?string $equipmentModelCode = null;
+
     #[ORM\Column(name: 'version', type: Types::INTEGER)]
     private int $version = 1;
 
@@ -114,6 +117,16 @@ class DigitalProductPassport
     public function setRepairability(?string $repairability): void
     {
         $this->repairability = $repairability;
+    }
+
+    public function getEquipmentModelCode(): ?string
+    {
+        return $this->equipmentModelCode;
+    }
+
+    public function setEquipmentModelCode(?string $equipmentModelCode): void
+    {
+        $this->equipmentModelCode = $equipmentModelCode;
     }
 
     public function getVersion(): int

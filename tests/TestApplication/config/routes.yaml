@@ -1,3 +1,6 @@
 # Plugin routes only (TestApplication loads Sylius routes automatically)
 tmonier_sylius_digital_product_passport_plugin:
     resource: '@TmonierSyliusDigitalProductPassportPlugin/config/routes.yaml'
+
+tmonier_sylius_customer_asset_management:
+    resource: '@TmonierSyliusCustomerAssetManagementPlugin/config/routes.yaml'
