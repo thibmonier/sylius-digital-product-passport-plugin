@@ -63,7 +63,11 @@ The product page then links to the public page `/product-passport/{id}`.
 
 ## Screenshots
 
-Screenshots of the public page will be added once the plugin is installed in the [Sylius B2B demo](https://sylius-b2b.thibaut-monier.fr/en_US/plugins).
+Public product passport page, as rendered in the [Sylius B2B demo](https://sylius-b2b.thibaut-monier.fr/en_US/plugins). Labels follow the shop locale; field values are stored as entered.
+
+![Public product passport page (English)](docs/public-page-en.png)
+
+![Public product passport page (French)](docs/public-page-fr.png)
 
 ## Requirements
 
