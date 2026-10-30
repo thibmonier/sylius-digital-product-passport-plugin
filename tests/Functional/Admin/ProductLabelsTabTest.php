@@ -11,6 +11,7 @@ use Sylius\Component\Core\Model\Product;
 use Sylius\Component\Core\Model\ProductVariant;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+use Tmonier\SyliusDigitalProductPassportPlugin\Entity\DigitalProductPassport;
 
 /**
  * Tests for the "Labels" tab in admin product edit page (US-232 T-232-05).
@@ -61,7 +62,7 @@ final class ProductLabelsTabTest extends WebTestCase
         $product->addChannel($channel);
 
         $variant = new ProductVariant();
-        $variant->setCode($gtin); // Use GTIN as variant code for simplicity
+        $variant->setCode('test-variant-' . uniqid());
         $variant->setCurrentLocale('en_US');
         $variant->setFallbackLocale('en_US');
         $variant->setName('Test Variant');
@@ -72,8 +73,14 @@ final class ProductLabelsTabTest extends WebTestCase
         $channelPricing->setPrice(1000);
         $variant->addChannelPricing($channelPricing);
 
+        $passport = new DigitalProductPassport();
+        $passport->setProductVariant($variant);
+        $passport->setProductIdentifier($gtin);
+        $passport->setOriginMaterials('Test Origin');
+
         $this->entityManager->persist($product);
         $this->entityManager->persist($variant);
+        $this->entityManager->persist($passport);
         $this->entityManager->flush();
 
         return $variant;
@@ -102,10 +109,10 @@ final class ProductLabelsTabTest extends WebTestCase
 
         // And un lien GS1 Digital Link est proposé
         $expectedLink = 'https://id.gs1.org/01/' . $gtin;
-        self::assertSelectorTextContains('body', $expectedLink);
+        self::assertSelectorTextContains('#labels', $expectedLink);
 
-        // And un QR est proposé (SVG element present)
-        self::assertSelectorExists('svg');
+        // And un QR est proposé (SVG element present in labels section)
+        self::assertSelectorExists('#labels svg');
     }
 
     public function testLabelsTabShowsInvalidGtinError(): void

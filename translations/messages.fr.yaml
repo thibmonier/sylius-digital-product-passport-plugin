@@ -22,3 +22,4 @@ tmonier_sylius_digital_product_passport:
                 copy: 'Copier'
                 invalid_gtin: 'GTIN invalide : %gtin%. Veuillez vérifier le code de la variante du produit.'
                 no_variant: 'Aucune variante de produit trouvée. Veuillez d''abord créer une variante.'
+                no_passport: 'Aucun passeport produit trouvé. Veuillez d''abord créer un passeport avec un GTIN valide.'
