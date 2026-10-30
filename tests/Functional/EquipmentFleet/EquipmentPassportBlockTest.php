@@ -11,7 +11,6 @@ use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Tmonier\SyliusCustomerAssetManagementPlugin\Entity\CustomerAsset;
 use Tmonier\SyliusCustomerAssetManagementPlugin\Entity\EquipmentModel;
-use Tmonier\SyliusCustomerAssetManagementPlugin\Entity\EquipmentModelTranslation;
 use Tmonier\SyliusDigitalProductPassportPlugin\Entity\DigitalProductPassport;
 
 /**
