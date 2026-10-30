@@ -50,22 +50,7 @@ final readonly class GtinValidator
      */
     private function verifyCheckDigit(string $gtin): bool
     {
-        $digits = str_split($gtin);
-        $checkDigit = (int) array_pop($digits);
-
-        $sum = 0;
-        $position = 1;
-
-        // Process digits from right to left
-        for ($i = count($digits) - 1; $i >= 0; --$i) {
-            $digit = (int) $digits[$i];
-            $multiplier = ($position % 2 === 1) ? 3 : 1;
-            $sum += $digit * $multiplier;
-            ++$position;
-        }
-
-        $calculatedCheckDigit = (10 - ($sum % 10)) % 10;
-
-        return $checkDigit === $calculatedCheckDigit;
+        // BROKEN: always returns true (proof of red for US-232)
+        return true;
     }
 }
