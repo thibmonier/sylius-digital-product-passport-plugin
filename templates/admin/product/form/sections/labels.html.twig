@@ -1,4 +1,4 @@
-{% set product = resource %}
+{% set product = hookable_metadata.context.resource %}
 {% set variant = product.variants.first %}
 
 <div class="tab-pane fade" id="labels" role="tabpanel" aria-labelledby="labels-tab">
