@@ -14,8 +14,10 @@ Open and versioned sustainability data model for Sylius 2 products: origin, recy
 - **Public passport page**: `/product-passport/{id}`, readable without an account, in English and French, showing the data, the passport version and the date of the last update. A passport with no data filled in is treated as unpublished and returns a 404.
 - **Link from the product page**: a "Product Passport" link in the product summary of the shop, through the `sylius_shop.product.show.content.info.summary` Twig hook.
 - **JSON export**: `DigitalProductPassport::toJson()` returns the passport with its schema version (`schemaVersion`).
+- **GS1 Digital Link and QR code**: when the passport product identifier is a valid GTIN (8, 12, 13 or 14 digits, check digit verified), the admin product edit page shows a "Labels" tab with the GS1 Digital Link (`https://id.gs1.org/01/{GTIN}`) and its QR code (SVG). An invalid GTIN is reported in the tab.
+- **Compatible spare parts** (optional): when [`tmonier/sylius-customer-asset-management-plugin`](https://github.com/thibmonier/sylius-customer-asset-management-plugin) is installed and the passport has an equipment model code, the public page lists the variants compatible with that equipment model, with a link to their product page; a disabled product is listed as unavailable, without link. Without that plugin, the block is not shown.
 
-Planned for later versions: an admin interface to edit passports, more data fields, GS1 Digital Link and QR codes.
+Planned for later versions: an admin interface to edit passports, SVG and PNG download of the QR code, more data fields.
 
 ## Installation
 
@@ -47,7 +49,7 @@ bin/console doctrine:migrations:migrate
 
 ## Usage
 
-Version 0.1.0 has no admin screen yet: passports are created in code (fixtures, import or a command of your own), for example:
+There is no admin screen to edit passports yet: passports are created in code (fixtures, import or a command of your own), for example:
 
 ```php
 $passport = new DigitalProductPassport();
@@ -55,6 +57,8 @@ $passport->setProductVariant($variant);
 $passport->setOriginMaterials('France, Germany');
 $passport->setRecyclability('100% recyclable');
 $passport->setRepairability('Repairability index: 8/10');
+$passport->setProductIdentifier('01234567890128'); // GTIN, used for the GS1 Digital Link
+$passport->setEquipmentModelCode('FORKLIFT_X'); // optional, customer-asset-management equipment model
 $entityManager->persist($passport);
 $entityManager->flush();
 ```
