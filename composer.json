@@ -18,6 +18,7 @@
     "license": "MIT",
     "require": {
         "php": "^8.2",
+        "endroid/qr-code": "^6.1",
         "sylius/sylius": "^2.2.9 || ^2.3"
     },
     "require-dev": {

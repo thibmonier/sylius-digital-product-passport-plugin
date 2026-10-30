@@ -28,7 +28,8 @@ final class GenerateQrTest extends KernelTestCase
 
         self::assertStringContainsString('<svg', $svg);
         self::assertStringContainsString('</svg>', $svg);
-        self::assertStringContainsString('5012345678900', $svg);
+        self::assertStringContainsString('xmlns=', $svg);
+        self::assertStringContainsString('<path', $svg); // QR code patterns
     }
 
     public function testGenerateQrPngReturnsValidPng(): void
