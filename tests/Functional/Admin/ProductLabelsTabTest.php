@@ -105,4 +105,30 @@ final class ProductLabelsTabTest extends WebTestCase
         // And un QR est proposé (SVG element present)
         self::assertSelectorExists('svg');
     }
+
+    public function testLabelsTabShowsInvalidGtinError(): void
+    {
+        // Gherkin: "GTIN absent ou invalide (erreur)"
+        // Given un GTIN invalide (clé de contrôle fausse)
+        $invalidGtin = '01234567890127'; // Invalid check digit (should be 8)
+        $variant = $this->createProductVariantWithGtin($invalidGtin);
+        $product = $variant->getProduct();
+
+        // And admin connecté
+        $adminUser = $this->createAdminUser();
+        $this->client->loginUser($adminUser);
+
+        $productId = $product->getId();
+        $this->entityManager->clear();
+
+        // When Sophie génère le lien (opens the tab)
+        $this->client->request('GET', '/admin/products/' . $productId . '/edit');
+
+        // Then la page se charge
+        self::assertResponseIsSuccessful();
+
+        // And une erreur explique la clé de contrôle
+        self::assertSelectorTextContains('.alert-warning', 'Invalid GTIN');
+        self::assertSelectorTextContains('.alert-warning', $invalidGtin);
+    }
 }
