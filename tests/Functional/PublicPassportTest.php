@@ -132,11 +132,19 @@ final class PublicPassportTest extends WebTestCase
     public function testDraftPassportReturns404(): void
     {
         // Gherkin: "Passeport non publié (erreur)"
-        // For now, all passports are public. This test ensures no data leaks.
-        $this->client->request('GET', '/product-passport/999999');
+        $variant = $this->createProductVariant();
+
+        // Create draft passport (no data filled = not published)
+        $draftPassport = new DigitalProductPassport();
+        $draftPassport->setProductVariant($variant);
+        // No data set: originMaterials, recyclability, repairability all null
+
+        $this->entityManager->persist($draftPassport);
+        $this->entityManager->flush();
+
+        $this->client->request('GET', '/product-passport/' . $draftPassport->getId());
 
         self::assertResponseStatusCodeSame(404);
-        // Verify 404 message is shown
         self::assertSelectorTextContains('body', 'Passport not found');
     }
 }

@@ -173,4 +173,14 @@ class DigitalProductPassport
 
         return json_encode($data, \JSON_THROW_ON_ERROR | \JSON_UNESCAPED_UNICODE);
     }
+
+    /**
+     * Check if passport is published (has at least one data field filled).
+     */
+    public function isPublished(): bool
+    {
+        return $this->originMaterials !== null ||
+            $this->recyclability !== null ||
+            $this->repairability !== null;
+    }
 }

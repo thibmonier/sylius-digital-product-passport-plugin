@@ -23,10 +23,15 @@
     <testsuites>
         <testsuite name="all">
             <directory>tests/Integration</directory>
+            <directory>tests/Functional</directory>
         </testsuite>
 
         <testsuite name="integration">
             <directory>tests/Integration</directory>
+        </testsuite>
+
+        <testsuite name="functional">
+            <directory>tests/Functional</directory>
         </testsuite>
     </testsuites>
 </phpunit>

@@ -23,7 +23,7 @@ final class PassportController extends AbstractController
             ->getRepository(DigitalProductPassport::class)
             ->find($id);
 
-        if ($passport === null) {
+        if ($passport === null || !$passport->isPublished()) {
             throw new NotFoundHttpException('Passport not found');
         }
 

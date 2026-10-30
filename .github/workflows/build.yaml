@@ -128,8 +128,8 @@ jobs:
                 run: vendor/bin/console doctrine:schema:validate --skip-sync
 
             -
-                name: Run integration tests
-                run: vendor/bin/phpunit --colors=always --testsuite=integration
+                name: Run tests
+                run: vendor/bin/phpunit --colors=always --testsuite=all
 
     zizmor:
         name: Workflow audit (zizmor)
