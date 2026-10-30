@@ -75,6 +75,7 @@ final class PartsDisplayedTest extends WebTestCase
         $passport = new DigitalProductPassport();
         $passport->setProductVariant($mainVariant);
         $passport->setProductIdentifier('1234567890123');
+        $passport->setOriginMaterials('France');
 
         $this->entityManager->persist($passport);
 

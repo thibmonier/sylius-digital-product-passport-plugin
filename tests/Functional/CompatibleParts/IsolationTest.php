@@ -94,6 +94,7 @@ final class IsolationTest extends WebTestCase
         $passport = new DigitalProductPassport();
         $passport->setProductVariant($mainVariant);
         $passport->setProductIdentifier('1111111111111');
+        $passport->setOriginMaterials('France');
 
         $this->entityManager->persist($passport);
 
