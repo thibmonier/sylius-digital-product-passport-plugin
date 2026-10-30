@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Symfony\Component\DependencyInjection\Loader\Configurator;
 
+use Tmonier\SyliusCustomerAssetManagementPlugin\Repository\EquipmentModelRepositoryInterface;
+use Tmonier\SyliusDigitalProductPassportPlugin\Service\CompatibleParts\CompatiblePartsProvider;
 use Tmonier\SyliusDigitalProductPassportPlugin\Service\DigitalLink\DigitalLinkGenerator;
 use Tmonier\SyliusDigitalProductPassportPlugin\Service\DigitalLink\GtinValidator;
 use Tmonier\SyliusDigitalProductPassportPlugin\Service\DigitalLink\QrGenerator;
@@ -33,4 +35,11 @@ return static function (ContainerConfigurator $containerConfigurator): void {
     $services->set(GtinValidator::class)->public();
     $services->set(DigitalLinkGenerator::class)->public();
     $services->set(QrGenerator::class)->public();
+
+    // Compatible parts provider (US-233) - optional dependency on customer-asset-management plugin
+    $services->set(CompatiblePartsProvider::class)
+        ->args([
+            service(EquipmentModelRepositoryInterface::class)->nullOnInvalid(),
+        ])
+        ->public();
 };

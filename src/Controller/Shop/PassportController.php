@@ -9,11 +9,13 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Tmonier\SyliusDigitalProductPassportPlugin\Entity\DigitalProductPassport;
+use Tmonier\SyliusDigitalProductPassportPlugin\Service\CompatibleParts\CompatiblePartsProvider;
 
 final class PassportController extends AbstractController
 {
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
+        private readonly CompatiblePartsProvider $compatiblePartsProvider,
     ) {
     }
 
@@ -27,8 +29,11 @@ final class PassportController extends AbstractController
             throw new NotFoundHttpException('Passport not found');
         }
 
+        $compatibleParts = $this->compatiblePartsProvider->getCompatibleParts($passport);
+
         return $this->render('@TmonierSyliusDigitalProductPassportPlugin/shop/passport/show.html.twig', [
             'passport' => $passport,
+            'compatibleParts' => $compatibleParts,
         ]);
     }
 }
