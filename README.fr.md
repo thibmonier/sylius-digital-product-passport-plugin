@@ -10,16 +10,12 @@ Modèle de données de durabilité ouvert et versionné pour les produits Sylius
 
 ## Fonctionnalités
 
-- **Modèle de données versionné** : schéma ouvert avec suivi de version et historique des révisions
-- **Données de durabilité** : origine des matériaux, composition, recyclabilité, indice de réparabilité et instructions, garantie, références de pièces détachées
-- **Page publique du passeport** : accessible sans connexion, affiche toutes les informations de durabilité
-- **Interface d'administration** : formulaires Symfony pour créer et modifier les passeports produit
-- **Export** : export JSON avec schéma versionné
-- **GS1 Digital Link** (à venir en v1.1) : support GTIN-14 et génération de QR code
+- **Modèle de données versionné** : un passeport par variante de produit (identifiant produit, origine des matériaux, recyclabilité, réparabilité), avec un numéro de version et un historique des révisions (`PassportRevision`, enregistrées par `PassportRevisionService`).
+- **Page publique du passeport** : `/product-passport/{id}`, lisible sans compte, en français et en anglais, avec les données, la version du passeport et la date de dernière mise à jour. Un passeport sans aucune donnée renseignée est considéré comme non publié et renvoie une 404.
+- **Lien depuis la fiche produit** : un lien « Passeport Produit » dans le résumé de la fiche produit de la boutique, par le hook Twig `sylius_shop.product.show.content.info.summary`.
+- **Export JSON** : `DigitalProductPassport::toJson()` renvoie le passeport avec la version de son schéma (`schemaVersion`).
 
-## Démo
-
-Voir le plugin en action : [sylius-b2b.thibaut-monier.fr](https://sylius-b2b.thibaut-monier.fr/fr_FR/plugins)
+Prévu dans des versions ultérieures : une interface d'administration des passeports, d'autres champs de données, GS1 Digital Link et les QR codes.
 
 ## Installation
 
@@ -36,7 +32,14 @@ return [
 ];
 ```
 
-Exécuter les migrations :
+Importer les routes, par exemple dans `config/routes/tmonier_digital_product_passport.yaml` :
+
+```yaml
+tmonier_digital_product_passport:
+    resource: '@TmonierSyliusDigitalProductPassportPlugin/config/routes.yaml'
+```
+
+Lancer les migrations :
 
 ```bash
 bin/console doctrine:migrations:migrate
@@ -44,33 +47,29 @@ bin/console doctrine:migrations:migrate
 
 ## Utilisation
 
-### Administration
+La version 0.1.0 n'a pas encore d'écran d'administration : les passeports se créent par le code (fixtures, import ou commande de votre choix), par exemple :
 
-Aller dans **Produits > Passeports Produit** pour créer et modifier les passeports de vos produits.
+```php
+$passport = new DigitalProductPassport();
+$passport->setProductVariant($variant);
+$passport->setOriginMaterials('France, Allemagne');
+$passport->setRecyclability('100 % recyclable');
+$passport->setRepairability('Indice de réparabilité : 8/10');
+$entityManager->persist($passport);
+$entityManager->flush();
+```
 
-### Page Publique
-
-Chaque produit avec un passeport a une page publique à `/product-passport/{id}` affichant :
-- Origine des matériaux
-- Informations de recyclabilité
-- Indice de réparabilité et instructions
-- Détails de garantie
-- Pièces détachées compatibles (si disponibles)
-- Version du schéma et date de dernière révision
+La fiche produit renvoie alors vers la page publique `/product-passport/{id}`.
 
 ## Captures d'écran
 
-### Formulaire Admin
-*(À venir avec US-231)*
-
-### Page Publique du Passeport
-*(À venir avec US-231)*
+Les captures de la page publique seront ajoutées une fois le plugin installé dans la [démo Sylius B2B](https://sylius-b2b.thibaut-monier.fr/fr_FR/plugins).
 
 ## Prérequis
 
 - PHP 8.2 ou supérieur
 - Sylius 2.2.9+ ou 2.3+
-- Symfony 6.4+, 7.4+, ou 8.0+
+- Symfony 7.4 ou 8.0 (testés en CI)
 
 ## Développement
 
@@ -100,6 +99,5 @@ Licence MIT. Voir [LICENSE](LICENSE) pour les détails.
 
 ## Liens
 
-- [Démo](https://sylius-b2b.thibaut-monier.fr/fr_FR/plugins)
 - [Règlement ESPR](https://eur-lex.europa.eu/eli/reg/2024/1781/oj?locale=fr)
 - [Registre DPP](https://single-market-economy.ec.europa.eu/single-market/digital-product-passport_fr)
