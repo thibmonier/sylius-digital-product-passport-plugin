@@ -21,6 +21,7 @@ use Tmonier\SyliusDigitalProductPassportPlugin\Entity\DigitalProductPassport;
 final class PublicPassportTest extends WebTestCase
 {
     private KernelBrowser $client;
+
     private EntityManagerInterface $entityManager;
 
     protected function setUp(): void

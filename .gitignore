@@ -20,4 +20,7 @@
 /tests/TestApplication/.env.test
 /tests/TestApplication/.env.local
 /tests/TestApplication/.env.*.local
+/tests/TestApplication/var/
+/public/bundles/
+/.phpunit.cache/
 .DS_Store

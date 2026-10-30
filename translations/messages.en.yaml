@@ -8,3 +8,18 @@ tmonier_digital_product_passport:
         version: 'Schema Version'
         last_update: 'Last Update'
         disclaimer: 'This passport provides preparatory sustainability data. It does not constitute a promise of regulatory compliance.'
+
+tmonier_sylius_digital_product_passport:
+    admin:
+        product:
+            labels_tab: 'Labels'
+            labels_section:
+                title: 'Product Labels & QR Codes'
+                gs1_link: 'GS1 Digital Link'
+                gs1_help: 'This link follows the GS1 Digital Link standard and can be used on product packaging.'
+                qr_code: 'QR Code'
+                qr_help: 'Scan this QR code to access the product passport page.'
+                copy: 'Copy'
+                invalid_gtin: 'Invalid GTIN: %gtin%. Please check the product variant code.'
+                no_variant: 'No product variant found. Please create a variant first.'
+                no_passport: 'No product passport found. Please create a passport with a valid GTIN first.'

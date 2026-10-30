@@ -1,0 +1,49 @@
+{% set product = hookable_metadata.context.resource %}
+{% set passport = get_product_passport(product) %}
+
+<div class="tab-pane fade" id="labels" role="tabpanel" aria-labelledby="labels-tab">
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title mb-0">{{ 'tmonier_sylius_digital_product_passport.admin.product.labels_section.title'|trans }}</h5>
+        </div>
+        <div class="card-body">
+            {% if passport and passport.productIdentifier %}
+                {% set gtin = passport.productIdentifier %}
+                {% set gs1Link = generate_gs1_digital_link(gtin) %}
+                {% set qrCode = gs1Link ? generate_qr_svg(gs1Link) : null %}
+
+                {% if gs1Link %}
+                    <div class="mb-3">
+                        <label class="form-label">{{ 'tmonier_sylius_digital_product_passport.admin.product.labels_section.gs1_link'|trans }}</label>
+                        <p class="mb-2">
+                            <a href="{{ gs1Link }}" target="_blank" rel="noopener noreferrer">{{ gs1Link }}</a>
+                        </p>
+                        <small class="form-text text-muted">
+                            {{ 'tmonier_sylius_digital_product_passport.admin.product.labels_section.gs1_help'|trans }}
+                        </small>
+                    </div>
+
+                    {% if qrCode %}
+                        <div class="mb-3">
+                            <label class="form-label">{{ 'tmonier_sylius_digital_product_passport.admin.product.labels_section.qr_code'|trans }}</label>
+                            <div class="text-center p-3 border rounded">
+                                {{ qrCode|raw }}
+                            </div>
+                            <small class="form-text text-muted">
+                                {{ 'tmonier_sylius_digital_product_passport.admin.product.labels_section.qr_help'|trans }}
+                            </small>
+                        </div>
+                    {% endif %}
+                {% else %}
+                    <div class="alert alert-warning">
+                        {{ 'tmonier_sylius_digital_product_passport.admin.product.labels_section.invalid_gtin'|trans({ '%gtin%': gtin }) }}
+                    </div>
+                {% endif %}
+            {% else %}
+                <div class="alert alert-info">
+                    {{ 'tmonier_sylius_digital_product_passport.admin.product.labels_section.no_passport'|trans }}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
