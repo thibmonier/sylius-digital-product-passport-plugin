@@ -59,7 +59,6 @@ final class PublicPassportTest extends WebTestCase
         $this->entityManager->persist($product);
         $this->entityManager->persist($variant);
         $this->entityManager->flush();
-        $this->entityManager->clear();
 
         return $variant;
     }
@@ -79,7 +78,10 @@ final class PublicPassportTest extends WebTestCase
         $this->entityManager->persist($passport);
         $this->entityManager->flush();
 
-        $this->client->request('GET', '/product-passport/' . $passport->getId());
+        $passportId = $passport->getId();
+        $this->entityManager->clear();
+
+        $this->client->request('GET', '/product-passport/' . $passportId);
 
         self::assertResponseIsSuccessful();
         self::assertSelectorTextContains('body', 'France, Allemagne');
@@ -102,12 +104,16 @@ final class PublicPassportTest extends WebTestCase
         $this->entityManager->persist($passport);
         $this->entityManager->flush();
 
+        $productSlug = $product->getSlug();
+        $passportId = $passport->getId();
+        $this->entityManager->clear();
+
         // Visit product show page
-        $this->client->request('GET', '/en_US/products/' . $product->getSlug());
+        $this->client->request('GET', '/en_US/products/' . $productSlug);
 
         self::assertResponseIsSuccessful();
         // Must show "Product Passport" link
-        self::assertSelectorTextContains('a[href*="/product-passport/' . $passport->getId() . '"]', 'Product Passport');
+        self::assertSelectorTextContains('a[href*="/product-passport/' . $passportId . '"]', 'Product Passport');
     }
 
     public function testPassportPageDisplaysInEnglish(): void
@@ -124,7 +130,10 @@ final class PublicPassportTest extends WebTestCase
         $this->entityManager->persist($passport);
         $this->entityManager->flush();
 
-        $this->client->request('GET', '/product-passport/' . $passport->getId(), [], [], [
+        $passportId = $passport->getId();
+        $this->entityManager->clear();
+
+        $this->client->request('GET', '/product-passport/' . $passportId, [], [], [
             'HTTP_ACCEPT_LANGUAGE' => 'en',
         ]);
 
@@ -157,7 +166,10 @@ final class PublicPassportTest extends WebTestCase
         $this->entityManager->persist($draftPassport);
         $this->entityManager->flush();
 
-        $this->client->request('GET', '/product-passport/' . $draftPassport->getId());
+        $draftPassportId = $draftPassport->getId();
+        $this->entityManager->clear();
+
+        $this->client->request('GET', '/product-passport/' . $draftPassportId);
 
         self::assertResponseStatusCodeSame(404);
         self::assertSelectorTextContains('body', 'Passport not found');
