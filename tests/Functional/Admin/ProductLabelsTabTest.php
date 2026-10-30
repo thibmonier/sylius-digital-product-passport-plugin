@@ -89,7 +89,7 @@ final class ProductLabelsTabTest extends WebTestCase
 
         // And admin connecté
         $adminUser = $this->createAdminUser();
-        $this->client->loginUser($adminUser);
+        $this->client->loginUser($adminUser, 'admin');
 
         $productId = $product->getId();
         $this->entityManager->clear();
@@ -118,7 +118,7 @@ final class ProductLabelsTabTest extends WebTestCase
 
         // And admin connecté
         $adminUser = $this->createAdminUser();
-        $this->client->loginUser($adminUser);
+        $this->client->loginUser($adminUser, 'admin');
 
         $productId = $product->getId();
         $this->entityManager->clear();
