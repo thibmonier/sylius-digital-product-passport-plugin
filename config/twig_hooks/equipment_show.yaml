@@ -1,0 +1,6 @@
+sylius_twig_hooks:
+    hooks:
+        'tmonier_equipment_shop.account.equipment_show.extensions':
+            equipment_passport_block:
+                template: '@TmonierSyliusDigitalProductPassportPlugin/shop/hook/equipment_passport_block.html.twig'
+                priority: 10
