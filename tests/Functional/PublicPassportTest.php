@@ -31,12 +31,17 @@ final class PublicPassportTest extends WebTestCase
 
     private function createProductVariant(): ProductVariant
     {
+        $channelRepository = static::getContainer()->get('sylius.repository.channel');
+        $channel = $channelRepository->findOneBy([]);
+
         $product = new Product();
         $product->setCode('test-product-' . uniqid());
         $product->setCurrentLocale('en_US');
         $product->setFallbackLocale('en_US');
         $product->setName('Test Product');
         $product->setSlug('test-product-' . uniqid());
+        $product->setEnabled(true);
+        $product->addChannel($channel);
 
         $variant = new ProductVariant();
         $variant->setCode('test-variant-' . uniqid());
