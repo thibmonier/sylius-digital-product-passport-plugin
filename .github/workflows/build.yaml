@@ -128,6 +128,12 @@ jobs:
                 run: vendor/bin/console doctrine:schema:validate --skip-sync
 
             -
+                name: Create entrypoints.json for tests
+                run: |
+                    mkdir -p vendor/sylius/test-application/public/build/shop
+                    echo '{"entrypoints":{"shop":{"js":[],"css":[]}}}' > vendor/sylius/test-application/public/build/shop/entrypoints.json
+
+            -
                 name: Run tests
                 run: vendor/bin/phpunit --colors=always --testsuite=all
 
