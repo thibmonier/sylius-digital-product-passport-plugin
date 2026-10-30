@@ -11,6 +11,8 @@ use Sylius\Component\Core\Model\Product;
 use Sylius\Component\Core\Model\ProductVariant;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+use Tmonier\SyliusCustomerAssetManagementPlugin\Entity\CustomerAsset;
+use Tmonier\SyliusCustomerAssetManagementPlugin\Entity\EquipmentModel;
 use Tmonier\SyliusDigitalProductPassportPlugin\Entity\DigitalProductPassport;
 
 /**
@@ -20,7 +22,9 @@ use Tmonier\SyliusDigitalProductPassportPlugin\Entity\DigitalProductPassport;
  * When Claire ouvre son passeport
  * Then aucune donnée de l'autre parc n'apparaît
  *
- * This test MUST fail first (isolation not implemented yet).
+ * The public passport page displays only catalogue data (product names, codes).
+ * NO customer-specific data (CustomerAsset label/identifier) should appear, even if
+ * assets exist for the equipment model.
  */
 final class IsolationTest extends WebTestCase
 {
@@ -72,46 +76,61 @@ final class IsolationTest extends WebTestCase
         $customer = new Customer();
         $customer->setEmail($email);
         $customer->setFirstName('Test');
-        $customer->setLastName('Customer');
+        $customer->setLastName('User');
 
         $this->entityManager->persist($customer);
 
         return $customer;
     }
 
-    public function testNoDataFromOtherCompanyIsDisplayed(): void
+    public function testCustomerAssetDataDoesNotAppearOnPublicPage(): void
     {
-        // Given: Claire's company
-        $claire = $this->createCustomer('claire@acme.com');
+        // Given: EquipmentModel with 1 compatible part
+        $modelCode = 'TRUCK-MODEL-' . uniqid();
+        $model = new EquipmentModel();
+        $model->setCode($modelCode);
+        $model->setCurrentLocale('en_US');
+        $model->setFallbackLocale('en_US');
+        $model->setName('Truck Model');
 
-        // Given: Another company
-        $otherCustomer = $this->createCustomer('other@competitor.com');
+        $partCode = 'acme-part-' . uniqid();
+        $part = $this->createProductVariant($partCode, 'Acme Part');
 
-        // Given: Equipment with passport
+        $model->addCompatibleVariant($part);
+        $this->entityManager->persist($model);
+
+        // Given: CustomerAssets for two different customers (Acme + Other)
+        $customerAcme = $this->createCustomer('acme@example.com');
+        $customerOther = $this->createCustomer('other@example.com');
+
+        $assetAcme = new CustomerAsset();
+        $assetAcme->setCustomer($customerAcme);
+        $assetAcme->setEquipmentModel($model);
+        $assetAcme->setLabel('ACME-TRUCK-001'); // MUST NOT appear
+        $assetAcme->setIdentifier('AB-123-CD'); // MUST NOT appear
+
+        $assetOther = new CustomerAsset();
+        $assetOther->setCustomer($customerOther);
+        $assetOther->setEquipmentModel($model);
+        $assetOther->setLabel('OTHER-TRUCK-999'); // MUST NOT appear
+        $assetOther->setIdentifier('XY-789-ZW'); // MUST NOT appear
+
+        $this->entityManager->persist($assetAcme);
+        $this->entityManager->persist($assetOther);
+
+        // Given: Passport linked to model
         $mainCode = 'main-equipment-' . uniqid();
         $mainVariant = $this->createProductVariant($mainCode, 'Main Equipment');
 
         $passport = new DigitalProductPassport();
         $passport->setProductVariant($mainVariant);
-        $passport->setProductIdentifier('1111111111111');
         $passport->setOriginMaterials('France');
+        $passport->setEquipmentModelCode($modelCode);
 
         $this->entityManager->persist($passport);
-
-        // Given: Part from Acme's fleet (should be displayed to Claire)
-        $acmePartCode = 'acme-part-' . uniqid();
-        $acmePart = $this->createProductVariant($acmePartCode, 'Acme Part');
-
-        // Given: Part from other company's fleet (should NOT be displayed to Claire)
-        $otherPartCode = 'other-company-part-' . uniqid();
-        $otherPart = $this->createProductVariant($otherPartCode, 'Other Company Part');
-
         $this->entityManager->flush();
 
-        // When: Claire opens the passport (logged in as Claire)
-        $claireUser = $this->createUser($claire);
-        $this->client->loginUser($claireUser, 'shop');
-
+        // When: Public page is displayed
         $this->client->request('GET', '/product-passport/' . $passport->getId());
 
         $response = $this->client->getResponse();
@@ -120,29 +139,14 @@ final class IsolationTest extends WebTestCase
         $content = $response->getContent();
         self::assertIsString($content);
 
-        // Then: Acme's part IS displayed
+        // Then: Compatible part IS displayed (catalogue data)
         self::assertStringContainsString('Acme Part', $content);
-        self::assertStringContainsString($acmePartCode, $content);
+        self::assertStringContainsString($partCode, $content);
 
-        // Then: Other company's part is NOT displayed (isolation)
-        self::assertStringNotContainsString('Other Company Part', $content);
-        self::assertStringNotContainsString($otherPartCode, $content);
-    }
-
-    private function createUser(Customer $customer): \Sylius\Component\Core\Model\ShopUserInterface
-    {
-        $userFactory = static::getContainer()->get('sylius.factory.shop_user');
-        $user = $userFactory->createNew();
-        \assert($user instanceof \Sylius\Component\Core\Model\ShopUserInterface);
-
-        $user->setUsername($customer->getEmail());
-        $user->setPlainPassword('password123');
-        $user->setEnabled(true);
-        $user->setCustomer($customer);
-
-        $this->entityManager->persist($user);
-        $this->entityManager->flush();
-
-        return $user;
+        // Then: CustomerAsset data MUST NOT appear (isolation)
+        self::assertStringNotContainsString('ACME-TRUCK-001', $content);
+        self::assertStringNotContainsString('AB-123-CD', $content);
+        self::assertStringNotContainsString('OTHER-TRUCK-999', $content);
+        self::assertStringNotContainsString('XY-789-ZW', $content);
     }
 }

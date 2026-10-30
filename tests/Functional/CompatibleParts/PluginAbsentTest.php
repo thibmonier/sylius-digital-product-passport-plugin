@@ -19,7 +19,8 @@ use Tmonier\SyliusDigitalProductPassportPlugin\Entity\DigitalProductPassport;
  * When la page publique s'affiche
  * Then le bloc est absent, sans erreur
  *
- * This is a non-regression guard test (may pass before code).
+ * This test verifies that a passport WITHOUT equipmentModelCode does not display
+ * the compatible parts block (plugin cannot be uninstalled in CI).
  */
 final class PluginAbsentTest extends WebTestCase
 {
@@ -62,37 +63,35 @@ final class PluginAbsentTest extends WebTestCase
 
         $this->entityManager->persist($product);
         $this->entityManager->persist($variant);
-        $this->entityManager->flush();
 
         return $variant;
     }
 
-    public function testPageDisplaysWithoutErrorWhenPluginIsAbsent(): void
+    public function testCompatiblePartsBlockAbsentWithoutEquipmentModelCode(): void
     {
-        // Given: un projet sans customer-asset-management (default test environment)
+        // Given: Passport WITHOUT equipmentModelCode
         $variant = $this->createProductVariant();
 
         $passport = new DigitalProductPassport();
         $passport->setProductVariant($variant);
-        $passport->setProductIdentifier('9876543210987');
         $passport->setOriginMaterials('France');
+        // equipmentModelCode is NOT set
 
         $this->entityManager->persist($passport);
         $this->entityManager->flush();
 
-        // When: la page publique s'affiche
+        // When: Page publique s'affiche
         $this->client->request('GET', '/product-passport/' . $passport->getId());
 
         $response = $this->client->getResponse();
-
-        // Then: le bloc est absent, sans erreur (200 OK)
         self::assertResponseIsSuccessful();
 
         $content = $response->getContent();
         self::assertIsString($content);
 
-        // Verify the compatible parts section is NOT displayed
-        self::assertStringNotContainsString('Compatible parts', $content);
-        self::assertStringNotContainsString('Pièces compatibles', $content);
+        // Then: bloc absent (no "Compatible parts" heading or similar)
+        self::assertStringNotContainsString('Compatible', $content);
+        self::assertStringNotContainsString('compatible', $content);
+        self::assertStringNotContainsString('Spare', $content);
     }
 }

@@ -10,6 +10,7 @@ use Sylius\Component\Core\Model\Product;
 use Sylius\Component\Core\Model\ProductVariant;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+use Tmonier\SyliusCustomerAssetManagementPlugin\Entity\EquipmentModel;
 use Tmonier\SyliusDigitalProductPassportPlugin\Entity\DigitalProductPassport;
 
 /**
@@ -34,7 +35,7 @@ final class PartRemovedTest extends WebTestCase
         $this->entityManager = $container->get('doctrine.orm.entity_manager');
     }
 
-    private function createProductVariant(string $code, string $name, bool $enabled): ProductVariant
+    private function createProductVariant(string $code, string $name, bool $enabled = true): ProductVariant
     {
         $channelRepository = static::getContainer()->get('sylius.repository.channel');
         $channel = $channelRepository->findOneBy([]);
@@ -45,7 +46,7 @@ final class PartRemovedTest extends WebTestCase
         $product->setFallbackLocale('en_US');
         $product->setName($name);
         $product->setSlug($code);
-        $product->setEnabled($enabled);
+        $product->setEnabled($enabled); // Can be disabled
         $product->addChannel($channel);
 
         $variant = new ProductVariant();
@@ -54,7 +55,6 @@ final class PartRemovedTest extends WebTestCase
         $variant->setFallbackLocale('en_US');
         $variant->setName($name . ' Variant');
         $variant->setProduct($product);
-        $variant->setEnabled($enabled);
 
         $channelPricing = new ChannelPricing();
         $channelPricing->setChannelCode($channel->getCode());
@@ -67,26 +67,35 @@ final class PartRemovedTest extends WebTestCase
         return $variant;
     }
 
-    public function testUnavailablePartIsListedWithoutPurchaseLink(): void
+    public function testUnavailablePartListedWithoutPurchaseLink(): void
     {
-        // Given: equipment with passport
+        // Given: EquipmentModel with 1 unavailable part
+        $modelCode = 'TRUCK-MODEL-' . uniqid();
+        $model = new EquipmentModel();
+        $model->setCode($modelCode);
+        $model->setCurrentLocale('en_US');
+        $model->setFallbackLocale('en_US');
+        $model->setName('Truck Model');
+
+        $unavailablePartCode = 'unavailable-part-' . uniqid();
+        $unavailablePart = $this->createProductVariant($unavailablePartCode, 'Unavailable Part', false); // disabled
+
+        $model->addCompatibleVariant($unavailablePart);
+        $this->entityManager->persist($model);
+
+        // Given: Passport linked to model
         $mainCode = 'main-equipment-' . uniqid();
-        $mainVariant = $this->createProductVariant($mainCode, 'Main Equipment', true);
+        $mainVariant = $this->createProductVariant($mainCode, 'Main Equipment');
 
         $passport = new DigitalProductPassport();
         $passport->setProductVariant($mainVariant);
-        $passport->setProductIdentifier('5555555555555');
         $passport->setOriginMaterials('France');
+        $passport->setEquipmentModelCode($modelCode);
 
         $this->entityManager->persist($passport);
-
-        // Given: unavailable part (disabled)
-        $unavailableCode = 'unavailable-part-' . uniqid();
-        $unavailablePart = $this->createProductVariant($unavailableCode, 'Unavailable Part', false);
-
         $this->entityManager->flush();
 
-        // When: page is displayed
+        // When: bloc s'affiche
         $this->client->request('GET', '/product-passport/' . $passport->getId());
 
         $response = $this->client->getResponse();
@@ -95,9 +104,11 @@ final class PartRemovedTest extends WebTestCase
         $content = $response->getContent();
         self::assertIsString($content);
 
-        // Then: part is listed as unavailable, without purchase link
+        // Then: pièce listée comme indisponible
         self::assertStringContainsString('Unavailable Part', $content);
-        self::assertStringContainsString('unavailable', strtolower($content));
-        self::assertStringNotContainsString('/products/' . $unavailableCode, $content);
+        self::assertStringContainsString('unavailable', $content);
+
+        // sans lien d'achat
+        self::assertStringNotContainsString('/products/' . $unavailablePartCode, $content);
     }
 }

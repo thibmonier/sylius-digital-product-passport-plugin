@@ -10,6 +10,7 @@ use Sylius\Component\Core\Model\Product;
 use Sylius\Component\Core\Model\ProductVariant;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+use Tmonier\SyliusCustomerAssetManagementPlugin\Entity\EquipmentModel;
 use Tmonier\SyliusDigitalProductPassportPlugin\Entity\DigitalProductPassport;
 
 /**
@@ -68,18 +69,14 @@ final class PartsDisplayedTest extends WebTestCase
 
     public function testThreeCompatiblePartsAreDisplayedWithLinks(): void
     {
-        // Given: équipement principal avec passeport
-        $mainCode = 'main-equipment-' . uniqid();
-        $mainVariant = $this->createProductVariant($mainCode, 'Main Equipment');
+        // Given: EquipmentModel avec 3 pièces compatibles
+        $modelCode = 'TRUCK-MODEL-' . uniqid();
+        $model = new EquipmentModel();
+        $model->setCode($modelCode);
+        $model->setCurrentLocale('en_US');
+        $model->setFallbackLocale('en_US');
+        $model->setName('Truck Model');
 
-        $passport = new DigitalProductPassport();
-        $passport->setProductVariant($mainVariant);
-        $passport->setProductIdentifier('1234567890123');
-        $passport->setOriginMaterials('France');
-
-        $this->entityManager->persist($passport);
-
-        // Given: 3 pièces compatibles
         $part1Code = 'spare-part-1-' . uniqid();
         $part2Code = 'spare-part-2-' . uniqid();
         $part3Code = 'spare-part-3-' . uniqid();
@@ -88,6 +85,23 @@ final class PartsDisplayedTest extends WebTestCase
         $part2 = $this->createProductVariant($part2Code, 'Spare Part 2');
         $part3 = $this->createProductVariant($part3Code, 'Spare Part 3');
 
+        $model->addCompatibleVariant($part1);
+        $model->addCompatibleVariant($part2);
+        $model->addCompatibleVariant($part3);
+
+        $this->entityManager->persist($model);
+
+        // Given: Passport lié au modèle
+        $mainCode = 'main-equipment-' . uniqid();
+        $mainVariant = $this->createProductVariant($mainCode, 'Main Equipment');
+
+        $passport = new DigitalProductPassport();
+        $passport->setProductVariant($mainVariant);
+        $passport->setProductIdentifier('1234567890123');
+        $passport->setOriginMaterials('France');
+        $passport->setEquipmentModelCode($modelCode);
+
+        $this->entityManager->persist($passport);
         $this->entityManager->flush();
 
         // When: Claire ouvre le passeport
