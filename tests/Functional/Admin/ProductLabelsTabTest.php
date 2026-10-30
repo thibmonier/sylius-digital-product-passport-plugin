@@ -21,6 +21,7 @@ use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 final class ProductLabelsTabTest extends WebTestCase
 {
     private KernelBrowser $client;
+
     private EntityManagerInterface $entityManager;
 
     protected function setUp(): void
