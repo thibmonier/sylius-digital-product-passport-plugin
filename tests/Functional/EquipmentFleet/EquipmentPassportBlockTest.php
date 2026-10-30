@@ -5,7 +5,11 @@ declare(strict_types=1);
 namespace Tests\Tmonier\SyliusDigitalProductPassportPlugin\Functional\EquipmentFleet;
 
 use Doctrine\ORM\EntityManagerInterface;
+use Sylius\Component\Core\Model\ChannelInterface;
+use Sylius\Component\Core\Model\ChannelPricing;
 use Sylius\Component\Core\Model\Customer;
+use Sylius\Component\Core\Model\Product;
+use Sylius\Component\Core\Model\ProductVariant;
 use Sylius\Component\Core\Model\ShopUser;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
@@ -54,13 +58,49 @@ final class EquipmentPassportBlockTest extends WebTestCase
         return $shopUser;
     }
 
-    private function createEquipmentModel(string $code): EquipmentModel
+    private function createProductVariant(string $name): ProductVariant
+    {
+        $channel = static::getContainer()->get('sylius.repository.channel')->findOneBy([]);
+        \assert($channel instanceof ChannelInterface);
+        $code = 'part-' . uniqid();
+
+        $product = new Product();
+        $product->setCode($code);
+        $product->setCurrentLocale('en_US');
+        $product->setFallbackLocale('en_US');
+        $product->setName($name);
+        $product->setSlug($code);
+        $product->setEnabled(true);
+        $product->addChannel($channel);
+
+        $variant = new ProductVariant();
+        $variant->setCode($code . '-variant');
+        $variant->setCurrentLocale('en_US');
+        $variant->setFallbackLocale('en_US');
+        $variant->setName($name);
+        $variant->setProduct($product);
+
+        $pricing = new ChannelPricing();
+        $pricing->setChannelCode((string) $channel->getCode());
+        $pricing->setPrice(1000);
+        $variant->addChannelPricing($pricing);
+
+        $this->entityManager->persist($product);
+        $this->entityManager->persist($variant);
+
+        return $variant;
+    }
+
+    private function createEquipmentModel(string $code, ?ProductVariant $compatiblePart = null): EquipmentModel
     {
         $model = new EquipmentModel();
         $model->setCode($code);
         $model->setCurrentLocale('en_US');
         $model->setFallbackLocale('en_US');
         $model->setName('Test Equipment Model');
+        if (null !== $compatiblePart) {
+            $model->addCompatibleVariant($compatiblePart);
+        }
 
         $this->entityManager->persist($model);
         $this->entityManager->flush();
@@ -88,16 +128,16 @@ final class EquipmentPassportBlockTest extends WebTestCase
         $shopUser = $this->createShopUser('test_' . uniqid() . '@example.com');
         $customer = $shopUser->getCustomer();
 
-        $model = $this->createEquipmentModel('MODEL-' . strtoupper(uniqid()));
+        $model = $this->createEquipmentModel('MODEL-' . strtoupper(uniqid()), $this->createProductVariant('Compatible Filter'));
         $asset = $this->createCustomerAsset($customer, $model, 'Machine de test');
 
         $passport = new DigitalProductPassport();
+        $passport->setProductVariant($this->createProductVariant('Machine Model Variant'));
         $passport->setEquipmentModelCode($model->getCode());
-        $passport->setProductIdentifier('EQ-' . uniqid());
+        $passport->setProductIdentifier('1234567890123');
         $passport->setOriginMaterials('Germany');
         $passport->setRecyclability('95% recyclable');
         $passport->setRepairability('Index: 8/10');
-        $passport->setPublished(true);
 
         $this->entityManager->persist($passport);
         $this->entityManager->flush();
@@ -111,6 +151,7 @@ final class EquipmentPassportBlockTest extends WebTestCase
         self::assertSelectorExists('[data-test="equipment-passport-block"]');
         self::assertSelectorExists('[data-test="equipment-passport-link"]');
         self::assertSelectorExists('[data-test="equipment-compatible-parts"]');
+        self::assertSelectorTextContains('[data-test="equipment-compatible-parts"]', 'Compatible Filter');
     }
 
     public function testEquipmentPageShowsNoPassportBlockWhenModelHasNoPassport(): void
