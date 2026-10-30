@@ -5,10 +5,8 @@ declare(strict_types=1);
 namespace Tmonier\SyliusDigitalProductPassportPlugin\Twig;
 
 use Doctrine\ORM\EntityManagerInterface;
-use Sylius\Component\Core\Model\ProductInterface;
 use Tmonier\SyliusDigitalProductPassportPlugin\Entity\DigitalProductPassport;
-use Tmonier\SyliusDigitalProductPassportPlugin\Service\DigitalLink\DigitalLinkGenerator;
-use Tmonier\SyliusDigitalProductPassportPlugin\Service\DigitalLink\QrGenerator;
+use Tmonier\SyliusDigitalProductPassportPlugin\Service\CompatibleParts\CompatiblePartsProvider;
 use Twig\Extension\AbstractExtension;
 use Twig\TwigFunction;
 
@@ -16,50 +14,32 @@ final class PassportExtension extends AbstractExtension
 {
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
-        private readonly DigitalLinkGenerator $digitalLinkGenerator,
-        private readonly QrGenerator $qrGenerator,
+        private readonly CompatiblePartsProvider $compatiblePartsProvider,
     ) {
     }
 
     public function getFunctions(): array
     {
         return [
-            new TwigFunction('get_product_passport', $this->getProductPassport(...)),
-            new TwigFunction('generate_gs1_digital_link', $this->generateGs1DigitalLink(...)),
-            new TwigFunction('generate_qr_svg', $this->generateQrSvg(...), ['is_safe' => ['html']]),
+            new TwigFunction('passport_find_by_equipment_model_code', $this->findPassportByEquipmentModelCode(...)),
+            new TwigFunction('passport_get_compatible_parts', $this->getCompatibleParts(...)),
         ];
     }
 
-    public function getProductPassport(ProductInterface $product): ?DigitalProductPassport
+    public function findPassportByEquipmentModelCode(string $code): ?DigitalProductPassport
     {
-        $variants = $product->getVariants();
-
-        if ($variants->isEmpty()) {
-            return null;
-        }
-
-        $firstVariant = $variants->first();
-
-        return $this->entityManager
+        $passport = $this->entityManager
             ->getRepository(DigitalProductPassport::class)
-            ->findOneBy(['productVariant' => $firstVariant]);
+            ->findOneBy(['equipmentModelCode' => $code, 'published' => true]);
+
+        return $passport instanceof DigitalProductPassport ? $passport : null;
     }
 
-    public function generateGs1DigitalLink(string $gtin, ?string $lot = null): ?string
+    /**
+     * @return list<\Sylius\Component\Core\Model\ProductVariantInterface>
+     */
+    public function getCompatibleParts(DigitalProductPassport $passport): array
     {
-        try {
-            return $this->digitalLinkGenerator->generate($gtin, $lot);
-        } catch (\InvalidArgumentException) {
-            return null;
-        }
-    }
-
-    public function generateQrSvg(string $url): ?string
-    {
-        try {
-            return $this->qrGenerator->generateSvg($url);
-        } catch (\Exception) {
-            return null;
-        }
+        return $this->compatiblePartsProvider->getCompatibleParts($passport);
     }
 }
