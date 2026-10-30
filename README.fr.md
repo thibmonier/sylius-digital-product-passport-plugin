@@ -16,6 +16,7 @@ Modèle de données de durabilité ouvert et versionné pour les produits Sylius
 - **Export JSON** : `DigitalProductPassport::toJson()` renvoie le passeport avec la version de son schéma (`schemaVersion`).
 - **GS1 Digital Link et QR code** : quand l'identifiant produit du passeport est un GTIN valide (8, 12, 13 ou 14 chiffres, clé de contrôle vérifiée), la page d'édition d'un produit en administration affiche un onglet « Étiquettes » avec le lien GS1 Digital Link (`https://id.gs1.org/01/{GTIN}`) et son QR code (SVG). Un GTIN invalide est signalé dans l'onglet.
 - **Pièces détachées compatibles** (optionnel) : quand [`tmonier/sylius-customer-asset-management-plugin`](https://github.com/thibmonier/sylius-customer-asset-management-plugin) est installé et que le passeport porte un code de modèle d'équipement, la page publique liste les variantes compatibles avec ce modèle, avec un lien vers leur fiche ; un produit désactivé est listé comme indisponible, sans lien. Sans ce plugin, le bloc n'est pas affiché.
+- **Passeport sur la page d'une machine** (optionnel, customer-asset-management ^0.2.1) : sur la page d'une machine du parc du client, un bloc renvoie vers le passeport publié de son modèle d'équipement (même code de modèle) et liste ses pièces compatibles. Un modèle sans passeport publié n'affiche aucun bloc.
 
 Prévu dans des versions ultérieures : une interface d'administration des passeports, le téléchargement du QR code en SVG et PNG, d'autres champs de données.
 

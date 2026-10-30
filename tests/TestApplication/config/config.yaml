@@ -1,3 +1,5 @@
 imports:
     - { resource: "@TmonierSyliusDigitalProductPassportPlugin/config/config.yaml" }
+    # customer-asset-management (require-dev): its grids and Twig hooks, for the machine page of US-242.
+    - { resource: "@TmonierSyliusCustomerAssetManagementPlugin/config/config.yaml" }
     - { resource: "services.php" }

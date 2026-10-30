@@ -1,0 +1,43 @@
+{% set equipment_model = hookable_metadata.context.equipment_model %}
+
+{% if equipment_model and equipment_model.code %}
+    {% set passport = passport_find_by_equipment_model_code(equipment_model.code) %}
+
+    {% if passport %}
+        <div class="card mt-4" data-test="equipment-passport-block">
+            <div class="card-body">
+                <h2 class="h5 card-title">{{ 'tmonier_digital_product_passport.ui.product_passport'|trans }}</h2>
+
+                <p>
+                    <a href="{{ path('tmonier_digital_product_passport_show', {'id': passport.id}) }}" 
+                       class="btn btn-primary" 
+                       data-test="equipment-passport-link">
+                        {{ 'tmonier_digital_product_passport.ui.view_passport'|trans }}
+                    </a>
+                </p>
+
+                {% set compatibleParts = passport_get_compatible_parts(passport) %}
+                {% if compatibleParts is not empty %}
+                    <div class="mt-3" data-test="equipment-compatible-parts">
+                        <h3 class="h6">{{ 'tmonier_digital_product_passport.ui.compatible_parts'|trans }}</h3>
+                        <ul class="list-group mt-2">
+                            {% for variant in compatibleParts %}
+                                {% set product = variant.product %}
+                                <li class="list-group-item">
+                                    {% if product.enabled %}
+                                        <a href="{{ path('sylius_shop_product_show', {'slug': product.slug, '_locale': app.request.locale}) }}">
+                                            {{ variant.name }}
+                                        </a>
+                                        <span class="text-muted">({{ product.code }})</span>
+                                    {% else %}
+                                        <span class="text-muted">{{ variant.name }} - {{ 'tmonier_digital_product_passport.ui.unavailable'|trans }}</span>
+                                    {% endif %}
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    {% endif %}
+{% endif %}

@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-30
+
+### Added
+- Passport block on the machine page of customer-asset-management (^0.2.1): link to the published passport of the equipment model and its compatible spare parts (US-242)
+
 ## [0.2.0] - 2026-10-30
 
 ### Added

@@ -6,7 +6,9 @@ namespace Tmonier\SyliusDigitalProductPassportPlugin\Twig;
 
 use Doctrine\ORM\EntityManagerInterface;
 use Sylius\Component\Core\Model\ProductInterface;
+use Sylius\Component\Core\Model\ProductVariantInterface;
 use Tmonier\SyliusDigitalProductPassportPlugin\Entity\DigitalProductPassport;
+use Tmonier\SyliusDigitalProductPassportPlugin\Service\CompatibleParts\CompatiblePartsProvider;
 use Tmonier\SyliusDigitalProductPassportPlugin\Service\DigitalLink\DigitalLinkGenerator;
 use Tmonier\SyliusDigitalProductPassportPlugin\Service\DigitalLink\QrGenerator;
 use Twig\Extension\AbstractExtension;
@@ -18,6 +20,7 @@ final class PassportExtension extends AbstractExtension
         private readonly EntityManagerInterface $entityManager,
         private readonly DigitalLinkGenerator $digitalLinkGenerator,
         private readonly QrGenerator $qrGenerator,
+        private readonly CompatiblePartsProvider $compatiblePartsProvider,
     ) {
     }
 
@@ -27,6 +30,8 @@ final class PassportExtension extends AbstractExtension
             new TwigFunction('get_product_passport', $this->getProductPassport(...)),
             new TwigFunction('generate_gs1_digital_link', $this->generateGs1DigitalLink(...)),
             new TwigFunction('generate_qr_svg', $this->generateQrSvg(...), ['is_safe' => ['html']]),
+            new TwigFunction('passport_find_by_equipment_model_code', $this->findPublishedPassportByEquipmentModelCode(...)),
+            new TwigFunction('passport_get_compatible_parts', $this->getCompatibleParts(...)),
         ];
     }
 
@@ -61,5 +66,27 @@ final class PassportExtension extends AbstractExtension
         } catch (\Exception) {
             return null;
         }
+    }
+
+    /** US-242: the published passport of an equipment model, shown on the machine page of customer-asset-management. */
+    public function findPublishedPassportByEquipmentModelCode(string $code): ?DigitalProductPassport
+    {
+        $passports = $this->entityManager
+            ->getRepository(DigitalProductPassport::class)
+            ->findBy(['equipmentModelCode' => $code]);
+
+        foreach ($passports as $passport) {
+            if ($passport->isPublished()) {
+                return $passport;
+            }
+        }
+
+        return null;
+    }
+
+    /** @return list<ProductVariantInterface> */
+    public function getCompatibleParts(DigitalProductPassport $passport): array
+    {
+        return $this->compatiblePartsProvider->getCompatibleParts($passport);
     }
 }

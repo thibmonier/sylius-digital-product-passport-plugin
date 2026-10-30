@@ -39,7 +39,7 @@
         "symfony/runtime": "^7.4 || ^8.0",
         "symfony/web-profiler-bundle": "^7.4 || ^8.0",
         "symfony/webpack-encore-bundle": "^2.2",
-        "tmonier/sylius-customer-asset-management-plugin": "^0.1.0"
+        "tmonier/sylius-customer-asset-management-plugin": "^0.2.1"
     },
     "suggest": {
         "tmonier/sylius-customer-asset-management-plugin": "Displays compatible spare parts on the public passport page when equipment model is linked"
