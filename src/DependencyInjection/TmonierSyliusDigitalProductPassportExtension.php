@@ -42,6 +42,10 @@ final class TmonierSyliusDigitalProductPassportExtension extends Extension imple
         /** @var array{sylius_twig_hooks: array<string, mixed>} $twigHooksConfig */
         $twigHooksConfig = Yaml::parseFile(__DIR__ . '/../../config/twig_hooks/product_show.yaml');
         $container->prependExtensionConfig('sylius_twig_hooks', $twigHooksConfig['sylius_twig_hooks']);
+
+        /** @var array{sylius_twig_hooks: array<string, mixed>} $adminProductUpdateConfig */
+        $adminProductUpdateConfig = Yaml::parseFile(__DIR__ . '/../../config/twig_hooks/product_update.yaml');
+        $container->prependExtensionConfig('sylius_twig_hooks', $adminProductUpdateConfig['sylius_twig_hooks']);
     }
 
     public function getAlias(): string

@@ -1,0 +1,11 @@
+sylius_twig_hooks:
+    hooks:
+        'sylius_admin.product.update.content.form.side_navigation':
+            labels:
+                template: '@TmonierSyliusDigitalProductPassport/admin/product/form/side_navigation/labels.html.twig'
+                priority: 50
+
+        'sylius_admin.product.update.content.form.sections':
+            labels:
+                template: '@TmonierSyliusDigitalProductPassport/admin/product/form/sections/labels.html.twig'
+                priority: 50
