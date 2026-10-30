@@ -139,6 +139,9 @@ final class IsolationTest extends WebTestCase
         $content = $response->getContent();
         self::assertIsString($content);
 
+        // Then: compatible parts block present
+        self::assertSelectorExists('[data-test="passport-compatible-parts"]');
+
         // Then: Compatible part IS displayed (catalogue data)
         self::assertStringContainsString('Acme Part', $content);
         self::assertStringContainsString($partCode, $content);

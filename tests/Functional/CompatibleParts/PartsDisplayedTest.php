@@ -113,6 +113,9 @@ final class PartsDisplayedTest extends WebTestCase
         $content = $response->getContent();
         self::assertIsString($content);
 
+        // Then: compatible parts block present
+        self::assertSelectorExists('[data-test="passport-compatible-parts"]');
+
         // Then: les 3 pièces s'affichent avec lien vers leur fiche
         self::assertStringContainsString('Spare Part 1', $content);
         self::assertStringContainsString('Spare Part 2', $content);

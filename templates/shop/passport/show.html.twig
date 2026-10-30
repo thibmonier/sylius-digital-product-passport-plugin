@@ -44,7 +44,7 @@
         </dl>
 
         {% if compatibleParts is not empty %}
-            <div class="mt-5">
+            <div class="mt-5" data-test="passport-compatible-parts">
                 <h2>{{ 'tmonier_digital_product_passport.ui.compatible_parts'|trans }}</h2>
                 <ul class="list-group mt-3">
                     {% for variant in compatibleParts %}

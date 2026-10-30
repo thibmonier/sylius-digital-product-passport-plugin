@@ -86,12 +86,7 @@ final class PluginAbsentTest extends WebTestCase
         $response = $this->client->getResponse();
         self::assertResponseIsSuccessful();
 
-        $content = $response->getContent();
-        self::assertIsString($content);
-
-        // Then: bloc absent (no "Compatible parts" heading or similar)
-        self::assertStringNotContainsString('Compatible', $content);
-        self::assertStringNotContainsString('compatible', $content);
-        self::assertStringNotContainsString('Spare', $content);
+        // Then: compatible parts block absent
+        self::assertSelectorNotExists('[data-test="passport-compatible-parts"]');
     }
 }

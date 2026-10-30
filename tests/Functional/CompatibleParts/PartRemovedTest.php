@@ -104,6 +104,9 @@ final class PartRemovedTest extends WebTestCase
         $content = $response->getContent();
         self::assertIsString($content);
 
+        // Then: compatible parts block present
+        self::assertSelectorExists('[data-test="passport-compatible-parts"]');
+
         // Then: pièce listée comme indisponible
         self::assertStringContainsString('Unavailable Part', $content);
         self::assertStringContainsString('unavailable', $content);
