@@ -52,6 +52,21 @@
             "symfony/flex": true,
             "symfony/runtime": true,
             "symfony/thanks": false
+        },
+        "policy": {
+            "advisories": {
+                "block": true,
+                "audit": "fail"
+            },
+            "abandoned": {
+                "block": false,
+                "audit": "report"
+            },
+            "malware": {
+                "block": true,
+                "block-scope": "all",
+                "audit": "fail"
+            }
         }
     },
     "extra": {
