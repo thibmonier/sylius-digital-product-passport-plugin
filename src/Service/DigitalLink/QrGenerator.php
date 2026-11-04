@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Tmonier\SyliusDigitalProductPassportPlugin\Service\DigitalLink;
 
-use Endroid\QrCode\Builder\Builder;
 use Endroid\QrCode\Encoding\Encoding;
 use Endroid\QrCode\ErrorCorrectionLevel;
+use Endroid\QrCode\QrCode;
 use Endroid\QrCode\RoundBlockSizeMode;
 use Endroid\QrCode\Writer\PngWriter;
 use Endroid\QrCode\Writer\SvgWriter;
@@ -47,12 +47,13 @@ final class QrGenerator
         return $this->generate(new PngWriter(), $link);
     }
 
+    /**
+     * Built from QrCode and a writer rather than Builder: the Builder API differs
+     * between endroid/qr-code 5 (fluent, create()) and 6 (constructor), QrCode does not.
+     */
     private function generate(WriterInterface $writer, string $link): string
     {
-        $builder = new Builder(
-            writer: $writer,
-            writerOptions: [],
-            validateResult: false,
+        $qrCode = new QrCode(
             data: $link,
             encoding: new Encoding('UTF-8'),
             errorCorrectionLevel: ErrorCorrectionLevel::High,
@@ -61,6 +62,6 @@ final class QrGenerator
             roundBlockSizeMode: RoundBlockSizeMode::Margin,
         );
 
-        return $builder->build()->getString();
+        return $writer->write($qrCode)->getString();
     }
 }
