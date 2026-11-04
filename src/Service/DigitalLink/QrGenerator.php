@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 namespace Tmonier\SyliusDigitalProductPassportPlugin\Service\DigitalLink;
 
-use Endroid\QrCode\Builder\Builder;
 use Endroid\QrCode\Encoding\Encoding;
 use Endroid\QrCode\ErrorCorrectionLevel;
+use Endroid\QrCode\QrCode;
 use Endroid\QrCode\RoundBlockSizeMode;
 use Endroid\QrCode\Writer\PngWriter;
 use Endroid\QrCode\Writer\SvgWriter;
+use Endroid\QrCode\Writer\WriterInterface;
 
 /**
  * Generates QR codes (SVG and PNG) for GS1 Digital Links.
@@ -18,6 +19,10 @@ use Endroid\QrCode\Writer\SvgWriter;
  */
 final class QrGenerator
 {
+    private const SIZE = 300;
+
+    private const MARGIN = 10;
+
     /**
      * Generate a QR code as SVG.
      *
@@ -27,19 +32,7 @@ final class QrGenerator
      */
     public function generateSvg(string $link): string
     {
-        $result = Builder::create()
-            ->writer(new SvgWriter())
-            ->writerOptions([])
-            ->data($link)
-            ->encoding(new Encoding('UTF-8'))
-            ->errorCorrectionLevel(ErrorCorrectionLevel::High)
-            ->size(300)
-            ->margin(10)
-            ->roundBlockSizeMode(RoundBlockSizeMode::Margin)
-            ->validateResult(false)
-            ->build();
-
-        return $result->getString();
+        return $this->generate(new SvgWriter(), $link);
     }
 
     /**
@@ -51,18 +44,24 @@ final class QrGenerator
      */
     public function generatePng(string $link): string
     {
-        $result = Builder::create()
-            ->writer(new PngWriter())
-            ->writerOptions([])
-            ->data($link)
-            ->encoding(new Encoding('UTF-8'))
-            ->errorCorrectionLevel(ErrorCorrectionLevel::High)
-            ->size(300)
-            ->margin(10)
-            ->roundBlockSizeMode(RoundBlockSizeMode::Margin)
-            ->validateResult(false)
-            ->build();
+        return $this->generate(new PngWriter(), $link);
+    }
 
-        return $result->getString();
+    /**
+     * Built from QrCode and a writer rather than Builder: the Builder API differs
+     * between endroid/qr-code 5 (fluent, create()) and 6 (constructor), QrCode does not.
+     */
+    private function generate(WriterInterface $writer, string $link): string
+    {
+        $qrCode = new QrCode(
+            data: $link,
+            encoding: new Encoding('UTF-8'),
+            errorCorrectionLevel: ErrorCorrectionLevel::High,
+            size: self::SIZE,
+            margin: self::MARGIN,
+            roundBlockSizeMode: RoundBlockSizeMode::Margin,
+        );
+
+        return $writer->write($qrCode)->getString();
     }
 }
