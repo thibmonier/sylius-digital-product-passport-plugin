@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Changed
+- Upgrade `endroid/qr-code` from ^5.0 to ^6.1; `QrGenerator` builds QR codes through the `Builder` constructor (`Builder::create()` was removed). Output parameters are unchanged (UTF-8, high error correction, size 300, margin 10) (US-268)
+
 ## [0.3.0] - 2026-10-30
 
 ### Added
