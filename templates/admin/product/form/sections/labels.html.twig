@@ -1,7 +1,7 @@
 {% set product = hookable_metadata.context.resource %}
 {% set passport = get_product_passport(product) %}
 
-<div class="tab-pane fade" id="labels" role="tabpanel" aria-labelledby="labels-tab">
+<div class="tab-pane" id="labels" role="tabpanel" tabindex="0" aria-labelledby="labels-tab">
     <div class="card">
         <div class="card-header">
             <h5 class="card-title mb-0">{{ 'tmonier_sylius_digital_product_passport.admin.product.labels_section.title'|trans }}</h5>

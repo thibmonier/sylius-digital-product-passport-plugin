@@ -115,6 +115,24 @@ final class ProductLabelsTabTest extends WebTestCase
         self::assertSelectorExists('#labels svg');
     }
 
+    public function testLabelsTabUsesTheSyliusSideNavigationMarkup(): void
+    {
+        // Seen in the B2B demo (sprint 48): the tab rendered as a bullet outside the side navigation.
+        $variant = $this->createProductVariantWithGtin('01234567890128');
+        $productId = $variant->getProduct()->getId();
+        $this->client->loginUser($this->createAdminUser(), 'admin');
+        $this->entityManager->clear();
+
+        $crawler = $this->client->request('GET', '/admin/products/' . $productId . '/edit');
+
+        self::assertResponseIsSuccessful();
+        $tab = $crawler->filter('button[data-bs-target="#labels"]');
+        self::assertCount(1, $tab);
+        self::assertStringContainsString('list-group-item', (string) $tab->attr('class'));
+        self::assertSame('tab', $tab->attr('data-bs-toggle'));
+        self::assertCount(0, $crawler->filter('li > button[data-bs-target="#labels"]'));
+    }
+
     public function testLabelsTabShowsInvalidGtinError(): void
     {
         // Gherkin: "GTIN absent ou invalide (erreur)"
