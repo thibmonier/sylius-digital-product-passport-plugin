@@ -39,6 +39,10 @@ class DigitalProductPassport
     #[ORM\Column(name: 'equipment_model_code', type: Types::STRING, length: 64, nullable: true)]
     private ?string $equipmentModelCode = null;
 
+    #[ORM\OneToOne(targetEntity: BatteryProfile::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
+    #[ORM\JoinColumn(name: 'battery_profile_id', referencedColumnName: 'id', nullable: true, onDelete: 'SET NULL')]
+    private ?BatteryProfile $batteryProfile = null;
+
     #[ORM\Column(name: 'version', type: Types::INTEGER)]
     private int $version = 1;
 
@@ -127,6 +131,16 @@ class DigitalProductPassport
     public function setEquipmentModelCode(?string $equipmentModelCode): void
     {
         $this->equipmentModelCode = $equipmentModelCode;
+    }
+
+    public function getBatteryProfile(): ?BatteryProfile
+    {
+        return $this->batteryProfile;
+    }
+
+    public function setBatteryProfile(?BatteryProfile $batteryProfile): void
+    {
+        $this->batteryProfile = $batteryProfile;
     }
 
     public function getVersion(): int
