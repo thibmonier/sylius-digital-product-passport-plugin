@@ -10,6 +10,6 @@ final class BatteryScopeAdvisor
 {
     public function warning(BatteryProfile $profile): ?string
     {
-        return null;
+        return $profile->chemistry;
     }
 }
