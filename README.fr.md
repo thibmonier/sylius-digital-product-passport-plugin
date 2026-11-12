@@ -99,6 +99,8 @@ Page publique du passeport produit, telle qu'affichée dans la [démo Sylius B2B
 
 ![Page publique du passeport produit (anglais)](docs/public-page-en.png)
 
+![Page publique du passeport d'une batterie industrielle de chariot élévateur : section batterie avec les unités (anglais)](docs/passport-battery-en.png)
+
 ## Prérequis
 
 - PHP 8.2 ou supérieur

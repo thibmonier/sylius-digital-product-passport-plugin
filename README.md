@@ -97,6 +97,8 @@ Public product passport page, as rendered in the [Sylius B2B demo](https://syliu
 
 ![Public product passport page (English)](docs/public-page-en.png)
 
+![Public passport page of an industrial forklift battery: battery section with units (English)](docs/passport-battery-en.png)
+
 ![Public product passport page (French)](docs/public-page-fr.png)
 
 ## Requirements
