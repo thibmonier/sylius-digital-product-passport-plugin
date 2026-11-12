@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
-## [Unreleased]
+## [0.4.0] - 2026-11-12
 
 ### Added
 - Optional battery profile on passports (`BatteryProfile`, `BatteryCategory`) for Regulation (EU) 2023/1542 art. 77, public level: mandatory category, chemistry, nominal capacity, nominal voltage, weight and manufacturing month; optional voltages, place, carbon footprint, recycled content, renewable share, cycle life, hazardous substances, critical raw materials, extinguishing agent, warranty (US-284)
