@@ -1,5 +1,12 @@
 {% extends '@SyliusShop/shared/layout/base.html.twig' %}
 
+{% macro row(label, value, test) %}
+    {% if value is not null and value != '' %}
+        <dt class="col-sm-4">{{ label }}</dt>
+        <dd class="col-sm-8"{% if test %} data-test="{{ test }}"{% endif %}>{{ value }}</dd>
+    {% endif %}
+{% endmacro %}
+
 {% block metatags %}
     {{ parent() }}
     <meta name="robots" content="noindex">
@@ -42,6 +49,41 @@
                 {{ passport.updatedAt|date('Y-m-d H:i:s') }}
             </dd>
         </dl>
+
+        {% if passport.batteryProfile is not null %}
+            {% set battery = passport.batteryProfile %}
+            {% set t = 'tmonier_digital_product_passport.battery.' %}
+            <section class="mt-5" data-test="passport-battery" aria-labelledby="passport-battery-title">
+                <h2 id="passport-battery-title">{{ (t ~ 'title')|trans }}</h2>
+
+                {% if batteryScopeNotice %}
+                    <div class="alert alert-warning" role="note" data-test="passport-battery-scope-notice">{{ batteryScopeNotice }}</div>
+                {% endif %}
+
+                <dl class="row mt-3">
+                    {{ _self.row((t ~ 'category')|trans, (t ~ 'categories.' ~ battery.category.value)|trans) }}
+                    {{ _self.row((t ~ 'chemistry')|trans, battery.chemistry) }}
+                    {{ _self.row((t ~ 'nominal_capacity')|trans, battery.nominalCapacityAh is null ? null : (t ~ 'units.ah')|trans({'%value%': battery.nominalCapacityAh})) }}
+                    {{ _self.row((t ~ 'nominal_voltage')|trans, battery.nominalVoltageV is null ? null : (t ~ 'units.v')|trans({'%value%': battery.nominalVoltageV})) }}
+                    {{ _self.row((t ~ 'min_voltage')|trans, battery.minVoltageV is null ? null : (t ~ 'units.v')|trans({'%value%': battery.minVoltageV})) }}
+                    {{ _self.row((t ~ 'max_voltage')|trans, battery.maxVoltageV is null ? null : (t ~ 'units.v')|trans({'%value%': battery.maxVoltageV})) }}
+                    {{ _self.row((t ~ 'weight')|trans, battery.weightKg is null ? null : (t ~ 'units.kg')|trans({'%value%': battery.weightKg})) }}
+                    {{ _self.row((t ~ 'manufactured_on')|trans, battery.manufacturedOn is null ? null : battery.manufacturedOn|date('m/Y')) }}
+                    {{ _self.row((t ~ 'manufacturing_place')|trans, battery.manufacturingPlace) }}
+                    {{ _self.row((t ~ 'carbon_footprint')|trans, battery.carbonFootprintKgCo2ePerKwh is null ? null : (t ~ 'units.carbon')|trans({'%value%': battery.carbonFootprintKgCo2ePerKwh})) }}
+                    {{ _self.row((t ~ 'recycled_cobalt')|trans, battery.recycledCobaltPercent is null ? null : (t ~ 'units.percent')|trans({'%value%': battery.recycledCobaltPercent})) }}
+                    {{ _self.row((t ~ 'recycled_lithium')|trans, battery.recycledLithiumPercent is null ? null : (t ~ 'units.percent')|trans({'%value%': battery.recycledLithiumPercent})) }}
+                    {{ _self.row((t ~ 'recycled_nickel')|trans, battery.recycledNickelPercent is null ? null : (t ~ 'units.percent')|trans({'%value%': battery.recycledNickelPercent})) }}
+                    {{ _self.row((t ~ 'recycled_lead')|trans, battery.recycledLeadPercent is null ? null : (t ~ 'units.percent')|trans({'%value%': battery.recycledLeadPercent})) }}
+                    {{ _self.row((t ~ 'renewable_share')|trans, battery.renewableSharePercent is null ? null : (t ~ 'units.percent')|trans({'%value%': battery.renewableSharePercent})) }}
+                    {{ _self.row((t ~ 'cycle_life')|trans, battery.cycleLife is null ? null : (t ~ 'units.cycles')|trans({'%value%': battery.cycleLife})) }}
+                    {{ _self.row((t ~ 'hazardous_substances')|trans, battery.hazardousSubstances) }}
+                    {{ _self.row((t ~ 'critical_raw_materials')|trans, battery.criticalRawMaterials) }}
+                    {{ _self.row((t ~ 'extinguishing_agent')|trans, battery.extinguishingAgent, 'battery-extinguishing-agent') }}
+                    {{ _self.row((t ~ 'warranty')|trans, battery.warrantyMonths is null ? null : (t ~ 'units.months')|trans({'%value%': battery.warrantyMonths}), 'battery-warranty') }}
+                </dl>
+            </section>
+        {% endif %}
 
         {% if compatibleParts is not empty %}
             <div class="mt-5" data-test="passport-compatible-parts">

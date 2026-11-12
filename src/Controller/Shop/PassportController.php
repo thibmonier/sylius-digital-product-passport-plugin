@@ -9,6 +9,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Tmonier\SyliusDigitalProductPassportPlugin\Entity\DigitalProductPassport;
+use Tmonier\SyliusDigitalProductPassportPlugin\Service\Battery\BatteryScopeAdvisor;
 use Tmonier\SyliusDigitalProductPassportPlugin\Service\CompatibleParts\CompatiblePartsProvider;
 
 final class PassportController extends AbstractController
@@ -16,6 +17,7 @@ final class PassportController extends AbstractController
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly CompatiblePartsProvider $compatiblePartsProvider,
+        private readonly BatteryScopeAdvisor $batteryScopeAdvisor,
     ) {
     }
 
@@ -30,10 +32,12 @@ final class PassportController extends AbstractController
         }
 
         $compatibleParts = $this->compatiblePartsProvider->getCompatibleParts($passport);
+        $batteryProfile = $passport->getBatteryProfile();
 
         return $this->render('@TmonierSyliusDigitalProductPassportPlugin/shop/passport/show.html.twig', [
             'passport' => $passport,
             'compatibleParts' => $compatibleParts,
+            'batteryScopeNotice' => $batteryProfile === null ? null : $this->batteryScopeAdvisor->warning($batteryProfile),
         ]);
     }
 }

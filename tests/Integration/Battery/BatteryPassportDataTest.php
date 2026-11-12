@@ -46,7 +46,7 @@ final class BatteryPassportDataTest extends KernelTestCase
         self::assertIsArray($data['battery']);
         self::assertSame('industrial', $data['battery']['category']);
         self::assertSame('Lithium iron phosphate (LFP)', $data['battery']['chemistry']);
-        self::assertSame(600.0, $data['battery']['nominalCapacityAh']);
+        self::assertEquals(600.0, $data['battery']['nominalCapacityAh']);
         self::assertSame('2027-03', $data['battery']['manufacturedOn']);
     }
 

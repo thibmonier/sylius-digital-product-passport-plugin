@@ -66,6 +66,31 @@ $entityManager->flush();
 
 The product page then links to the public page `/product-passport/{id}`.
 
+## Battery passport (public level)
+
+Regulation (EU) 2023/1542, art. 77(1): from 18 February 2027, a battery passport is required for each LMT battery, each industrial battery with a capacity greater than 2 kWh and each electric vehicle battery. The public data are listed in annex XIII point 1 (including annex VI part A).
+
+A passport can carry an optional **battery profile** (`BatteryProfile`, `$passport->setBatteryProfile()`); passports without it are unchanged.
+
+- **Mandatory when a profile exists**: category (`BatteryCategory`: LMT, industrial, electric vehicle, portable, SLI), chemistry, nominal capacity (Ah), nominal voltage (V), weight (kg), manufacturing date (month and year).
+- **Optional**: minimum and maximum voltage, manufacturing place, carbon footprint (kg CO2e/kWh), recycled content of cobalt, lithium, nickel and lead (%), renewable content share (%), expected cycle life, hazardous substances, critical raw materials, extinguishing agent, warranty duration.
+- **Validation** (Symfony Validator, `validator->validate($passport)`): a missing mandatory field is refused with a message that names it; percentages must be between 0 and 100, other values greater than 0. A portable or SLI battery is **accepted** and flagged with a notice, "Battery passport is not mandatory for this category (art. 77(1))" (`BatteryScopeAdvisor`, also shown on the public page). The 2 kWh threshold of industrial batteries is not checked.
+- **Public page**: a "Battery" section in English and French, with units, as a definition list. A revision (`PassportRevision`) records the profile like the other fields.
+- **JSON export**: a passport with a profile exports `schemaVersion` 2, which is version 1 plus a `battery` object. A passport without a profile still exports exactly the version 1 keys, so existing consumers are not affected.
+
+```php
+$battery = new BatteryProfile();
+$battery->category = BatteryCategory::Industrial;
+$battery->chemistry = 'Lithium iron phosphate (LFP)';
+$battery->nominalCapacityAh = 600.0;
+$battery->nominalVoltageV = 48.0;
+$battery->weightKg = 850.0;
+$battery->manufacturedOn = new \DateTimeImmutable('2027-03-01'); // only month and year are shown
+$passport->setBatteryProfile($battery);
+```
+
+Out of scope: the restricted access levels (legitimate interest, authorities) and the submission to the European battery passport registry (art. 77(10)). The plugin still makes **no promise of regulatory compliance**.
+
 ## Screenshots
 
 Public product passport page, as rendered in the [Sylius B2B demo](https://sylius-b2b.thibaut-monier.fr/en_US/plugins). Labels follow the shop locale; field values are stored as entered.

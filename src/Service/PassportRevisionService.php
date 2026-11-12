@@ -26,17 +26,31 @@ final readonly class PassportRevisionService implements PassportRevisionServiceI
         $revision = new PassportRevision();
         $revision->setPassport($passport);
         $revision->setAuthor($author);
-        $revision->setData([
+        $revision->setData($this->snapshot($passport));
+
+        $this->entityManager->persist($revision);
+        $this->entityManager->flush();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function snapshot(DigitalProductPassport $passport): array
+    {
+        $data = [
             'product_identifier' => $passport->getProductIdentifier(),
             'digital_link_uri' => $passport->getDigitalLinkUri(),
             'origin_materials' => $passport->getOriginMaterials(),
             'recyclability' => $passport->getRecyclability(),
             'repairability' => $passport->getRepairability(),
             'version' => $passport->getVersion(),
-        ]);
+        ];
 
-        $this->entityManager->persist($revision);
-        $this->entityManager->flush();
+        if ($passport->getBatteryProfile() !== null) {
+            $data['battery'] = $passport->getBatteryProfile()->toArray();
+        }
+
+        return $data;
     }
 
     public function getRevisions(DigitalProductPassport $passport): array

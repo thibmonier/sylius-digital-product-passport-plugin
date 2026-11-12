@@ -12,7 +12,7 @@ final class Version20261112100000 extends AbstractMigration
 {
     public function getDescription(): string
     {
-        return 'Add the tmonier_battery_profile table and the battery_profile_id column of passports (US-284).';
+        return 'Create the tmonier_battery_profile table (US-284).';
     }
 
     public function up(Schema $schema): void
@@ -40,20 +40,10 @@ final class Version20261112100000 extends AbstractMigration
         $profile->addColumn('extinguishing_agent', Types::STRING, ['length' => 255, 'notnull' => false]);
         $profile->addColumn('warranty_months', Types::INTEGER, ['notnull' => false]);
         $profile->setPrimaryKey(['id']);
-
-        $passport = $schema->getTable('tmonier_digital_product_passport');
-        $passport->addColumn('battery_profile_id', Types::INTEGER, ['notnull' => false]);
-        $passport->addUniqueIndex(['battery_profile_id'], 'UNIQ_TMONIER_DPP_BATTERY_PROFILE');
-        $passport->addForeignKeyConstraint('tmonier_battery_profile', ['battery_profile_id'], ['id'], ['onDelete' => 'SET NULL'], 'FK_TMONIER_DPP_BATTERY_PROFILE');
     }
 
     public function down(Schema $schema): void
     {
-        $passport = $schema->getTable('tmonier_digital_product_passport');
-        $passport->removeForeignKey('FK_TMONIER_DPP_BATTERY_PROFILE');
-        $passport->dropIndex('UNIQ_TMONIER_DPP_BATTERY_PROFILE');
-        $passport->dropColumn('battery_profile_id');
-
         $schema->dropTable('tmonier_battery_profile');
     }
 }
