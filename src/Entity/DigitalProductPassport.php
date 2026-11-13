@@ -7,6 +7,7 @@ namespace Tmonier\SyliusDigitalProductPassportPlugin\Entity;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Sylius\Component\Core\Model\ProductVariantInterface;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity]
 #[ORM\Table(name: 'tmonier_digital_product_passport')]
@@ -38,6 +39,11 @@ class DigitalProductPassport
 
     #[ORM\Column(name: 'equipment_model_code', type: Types::STRING, length: 64, nullable: true)]
     private ?string $equipmentModelCode = null;
+
+    #[ORM\OneToOne(targetEntity: BatteryProfile::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
+    #[ORM\JoinColumn(name: 'battery_profile_id', referencedColumnName: 'id', nullable: true, onDelete: 'SET NULL')]
+    #[Assert\Valid]
+    private ?BatteryProfile $batteryProfile = null;
 
     #[ORM\Column(name: 'version', type: Types::INTEGER)]
     private int $version = 1;
@@ -129,6 +135,16 @@ class DigitalProductPassport
         $this->equipmentModelCode = $equipmentModelCode;
     }
 
+    public function getBatteryProfile(): ?BatteryProfile
+    {
+        return $this->batteryProfile;
+    }
+
+    public function setBatteryProfile(?BatteryProfile $batteryProfile): void
+    {
+        $this->batteryProfile = $batteryProfile;
+    }
+
     public function getVersion(): int
     {
         return $this->version;
@@ -157,7 +173,7 @@ class DigitalProductPassport
     /**
      * Export passport to JSON with versioned schema.
      *
-     * Schema version 1 format:
+     * Schema version 1 format (a passport without battery profile):
      * {
      *   "schemaVersion": 1,
      *   "productIdentifier": "string|null",
@@ -169,11 +185,14 @@ class DigitalProductPassport
      *   "createdAt": "ISO 8601",
      *   "updatedAt": "ISO 8601"
      * }
+     *
+     * Schema version 2 (a passport with a battery profile) is version 1 plus a "battery" object
+     * (see BatteryProfile::toArray()); consumers of version 1 can ignore it.
      */
     public function toJson(): string
     {
         $data = [
-            'schemaVersion' => 1,
+            'schemaVersion' => $this->batteryProfile === null ? 1 : 2,
             'productIdentifier' => $this->productIdentifier,
             'digitalLinkUri' => $this->digitalLinkUri,
             'originMaterials' => $this->originMaterials,
@@ -183,6 +202,10 @@ class DigitalProductPassport
             'createdAt' => $this->createdAt->format(\DateTimeInterface::ATOM),
             'updatedAt' => $this->updatedAt->format(\DateTimeInterface::ATOM),
         ];
+
+        if ($this->batteryProfile !== null) {
+            $data['battery'] = $this->batteryProfile->toArray();
+        }
 
         return json_encode($data, \JSON_THROW_ON_ERROR | \JSON_UNESCAPED_UNICODE);
     }
@@ -194,6 +217,7 @@ class DigitalProductPassport
     {
         return $this->originMaterials !== null ||
             $this->recyclability !== null ||
-            $this->repairability !== null;
+            $this->repairability !== null ||
+            $this->batteryProfile !== null;
     }
 }

@@ -12,6 +12,44 @@ tmonier_digital_product_passport:
         unavailable: 'indisponible'
         view_passport: 'Voir le passeport produit'
 
+    battery:
+        title: 'Batterie'
+        not_mandatory: 'Passeport batterie non obligatoire pour cette catégorie (art. 77(1)).'
+        category: 'Catégorie'
+        categories:
+            lmt: 'Moyen de transport léger (LMT)'
+            industrial: 'Industrielle'
+            electric_vehicle: 'Véhicule électrique'
+            portable: 'Portable'
+            sli: 'Démarrage, éclairage et allumage (SLI)'
+        chemistry: 'Chimie'
+        nominal_capacity: 'Capacité nominale'
+        nominal_voltage: 'Tension nominale'
+        min_voltage: 'Tension minimale'
+        max_voltage: 'Tension maximale'
+        weight: 'Poids'
+        manufactured_on: 'Date de fabrication'
+        manufacturing_place: 'Lieu de fabrication'
+        carbon_footprint: 'Empreinte carbone'
+        recycled_cobalt: 'Cobalt recyclé'
+        recycled_lithium: 'Lithium recyclé'
+        recycled_nickel: 'Nickel recyclé'
+        recycled_lead: 'Plomb recyclé'
+        renewable_share: 'Part d''énergie renouvelable'
+        cycle_life: 'Durée de vie attendue'
+        hazardous_substances: 'Substances dangereuses'
+        critical_raw_materials: 'Matières premières critiques'
+        extinguishing_agent: 'Agent d''extinction'
+        warranty: 'Garantie'
+        units:
+            ah: '%value% Ah'
+            v: '%value% V'
+            kg: '%value% kg'
+            percent: '%value% %'
+            carbon: '%value% kg CO2e/kWh'
+            cycles: '%value% cycles'
+            months: '%value% mois'
+
 tmonier_sylius_digital_product_passport:
     admin:
         product:

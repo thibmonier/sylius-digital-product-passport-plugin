@@ -66,6 +66,31 @@ $entityManager->flush();
 
 La fiche produit renvoie alors vers la page publique `/product-passport/{id}`.
 
+## Passeport batterie (niveau public)
+
+Règlement (UE) 2023/1542, art. 77(1) : à partir du 18 février 2027, un passeport batterie est exigé pour chaque batterie LMT (moyen de transport léger), chaque batterie industrielle de capacité supérieure à 2 kWh et chaque batterie de véhicule électrique. Les données publiques figurent à l'annexe XIII point 1 (dont l'annexe VI partie A).
+
+Un passeport peut porter un **profil batterie** facultatif (`BatteryProfile`, `$passport->setBatteryProfile()`) ; les passeports sans profil sont inchangés.
+
+- **Obligatoires quand un profil existe** : catégorie (`BatteryCategory` : LMT, industrielle, véhicule électrique, portable, SLI), chimie, capacité nominale (Ah), tension nominale (V), poids (kg), date de fabrication (mois et année).
+- **Facultatifs** : tensions minimale et maximale, lieu de fabrication, empreinte carbone (kg CO2e/kWh), contenu recyclé de cobalt, lithium, nickel et plomb (%), part d'énergie renouvelable (%), durée de vie en cycles, substances dangereuses, matières premières critiques, agent d'extinction, durée de garantie.
+- **Validation** (Symfony Validator, `validator->validate($passport)`) : un champ obligatoire manquant est refusé avec un message qui le nomme ; les pourcentages doivent être compris entre 0 et 100, les autres valeurs supérieures à 0. Une batterie portable ou SLI est **acceptée** et signalée par un avertissement, « Passeport batterie non obligatoire pour cette catégorie (art. 77(1)) » (`BatteryScopeAdvisor`, affiché aussi sur la page publique). Le seuil de 2 kWh des batteries industrielles n'est pas vérifié.
+- **Page publique** : une section « Batterie » en français et en anglais, avec les unités, sous forme de liste de définitions. Une révision (`PassportRevision`) enregistre le profil comme les autres champs.
+- **Export JSON** : un passeport avec profil exporte `schemaVersion` 2, soit la version 1 plus un objet `battery`. Un passeport sans profil exporte exactement les clés de la version 1 : les consommateurs existants ne sont pas touchés.
+
+```php
+$battery = new BatteryProfile();
+$battery->category = BatteryCategory::Industrial;
+$battery->chemistry = 'Lithium iron phosphate (LFP)';
+$battery->nominalCapacityAh = 600.0;
+$battery->nominalVoltageV = 48.0;
+$battery->weightKg = 850.0;
+$battery->manufacturedOn = new \DateTimeImmutable('2027-03-01'); // seuls le mois et l'année sont affichés
+$passport->setBatteryProfile($battery);
+```
+
+Hors périmètre : les niveaux d'accès restreints (intérêt légitime, autorités) et le dépôt au registre européen des passeports batterie (art. 77(10)). Le plugin ne fait toujours **aucune promesse de conformité réglementaire**.
+
 ## Captures d'écran
 
 Page publique du passeport produit, telle qu'affichée dans la [démo Sylius B2B](https://sylius-b2b.thibaut-monier.fr/fr_FR/plugins). Les intitulés suivent la langue de la boutique ; les valeurs des champs sont affichées telles que saisies.
@@ -73,6 +98,8 @@ Page publique du passeport produit, telle qu'affichée dans la [démo Sylius B2B
 ![Page publique du passeport produit (français)](docs/public-page-fr.png)
 
 ![Page publique du passeport produit (anglais)](docs/public-page-en.png)
+
+![Page publique du passeport d'une batterie industrielle de chariot élévateur : section batterie avec les unités (anglais)](docs/passport-battery-en.png)
 
 ## Prérequis
 

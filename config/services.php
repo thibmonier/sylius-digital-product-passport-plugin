@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Symfony\Component\DependencyInjection\Loader\Configurator;
 
 use Tmonier\SyliusCustomerAssetManagementPlugin\Repository\EquipmentModelRepositoryInterface;
+use Tmonier\SyliusDigitalProductPassportPlugin\Service\Battery\BatteryScopeAdvisor;
 use Tmonier\SyliusDigitalProductPassportPlugin\Service\CompatibleParts\CompatiblePartsProvider;
 use Tmonier\SyliusDigitalProductPassportPlugin\Service\DigitalLink\DigitalLinkGenerator;
 use Tmonier\SyliusDigitalProductPassportPlugin\Service\DigitalLink\GtinValidator;
@@ -35,6 +36,9 @@ return static function (ContainerConfigurator $containerConfigurator): void {
     $services->set(GtinValidator::class)->public();
     $services->set(DigitalLinkGenerator::class)->public();
     $services->set(QrGenerator::class)->public();
+
+    // Battery profile scope advice (US-284)
+    $services->set(BatteryScopeAdvisor::class)->public();
 
     // Compatible parts provider (US-233) - optional dependency on customer-asset-management plugin
     $services->set(CompatiblePartsProvider::class)
